@@ -19,19 +19,29 @@ class AuthService {
   // Stream pour écouter les changements d'authentification
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Inscription avec email et mot de passe
+  // Inscription avec email et mot de passe + données utilisateur
   Future<UserCredential?> registerWithEmailAndPassword(
     String email,
-    String password,
-  ) async {
+    String password, {
+    String? firstName,
+    String? lastName,
+    String? dateOfBirth,
+    String? photoURL,
+  }) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Créer un document utilisateur dans Firestore
-      await _createUserDocument(result.user);
+      // Créer un document utilisateur dans Firestore avec toutes les données
+      await _createUserDocument(
+        result.user,
+        firstName: firstName,
+        lastName: lastName,
+        dateOfBirth: dateOfBirth,
+        photoURL: photoURL,
+      );
 
       return result;
     } catch (e) {
@@ -40,7 +50,39 @@ class AuthService {
     }
   }
 
-  // Connexion avec email et mot de passe
+  // Connexion avec first name et mot de passe
+  Future<UserCredential?> signInWithFirstNameAndPassword(
+    String firstName,
+    String password,
+  ) async {
+    try {
+      // Rechercher l'utilisateur par firstName dans Firestore
+      QuerySnapshot userQuery = await _firestore
+          .collection('users')
+          .where('firstName', isEqualTo: firstName)
+          .limit(1)
+          .get();
+
+      if (userQuery.docs.isEmpty) {
+        throw Exception('Aucun utilisateur trouvé avec ce prénom');
+      }
+
+      // Récupérer l'email de l'utilisateur
+      String email = userQuery.docs.first.get('email');
+
+      // Se connecter avec email et password
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return result;
+    } catch (e) {
+      print('Erreur de connexion: $e');
+      rethrow;
+    }
+  }
+
+  // Connexion avec email et mot de passe (garde pour compatibilité)
   Future<UserCredential?> signInWithEmailAndPassword(
     String email,
     String password,
@@ -60,7 +102,19 @@ class AuthService {
   // Déconnexion
   Future<void> signOut() async {
     try {
-      await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
+      // Déconnexion Firebase Auth
+      await _auth.signOut();
+
+      // Déconnexion Google seulement si l'utilisateur était connecté via Google
+      try {
+        final googleUser = _googleSignIn.currentUser;
+        if (googleUser != null) {
+          await _googleSignIn.signOut();
+        }
+      } catch (e) {
+        // Ignorer les erreurs de déconnexion Google si non configuré
+        print('Google sign out skipped: $e');
+      }
     } catch (e) {
       print('Erreur de déconnexion: $e');
       rethrow;
@@ -145,8 +199,33 @@ class AuthService {
     }
   }
 
+  // Obtenir le rôle de l'utilisateur connecté
+  Future<String> getUserRole() async {
+    try {
+      final user = currentUser;
+      if (user == null) {
+        return 'user'; // Par défaut
+      }
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        return userDoc.get('role') ?? 'user';
+      }
+      return 'user';
+    } catch (e) {
+      print('Erreur lors de la récupération du rôle: $e');
+      return 'user';
+    }
+  }
+
   // Créer un document utilisateur dans Firestore
-  Future<void> _createUserDocument(User? user) async {
+  Future<void> _createUserDocument(
+    User? user, {
+    String? firstName,
+    String? lastName,
+    String? dateOfBirth,
+    String? photoURL,
+  }) async {
     if (user != null) {
       DocumentReference userDoc = _firestore.collection('users').doc(user.uid);
 
@@ -157,11 +236,17 @@ class AuthService {
         await userDoc.set({
           'uid': user.uid,
           'email': user.email,
-          'displayName': user.displayName ?? 'Utilisateur',
-          'photoURL': user.photoURL,
+          'firstName': firstName ?? user.displayName?.split(' ').first ?? '',
+          'lastName': lastName ?? user.displayName?.split(' ').last ?? '',
+          'displayName': user.displayName ?? '$firstName $lastName',
+          'dateOfBirth': dateOfBirth ?? '',
+          'photoURL': photoURL ?? user.photoURL,
           'createdAt': FieldValue.serverTimestamp(),
           'lastSignIn': FieldValue.serverTimestamp(),
           'authProvider': _getAuthProvider(user),
+          'role':
+              'user', // Par défaut, tous les nouveaux utilisateurs sont 'user'
+          'isActive': true, // Par défaut, les utilisateurs sont actifs
         });
       } else {
         // Mettre à jour la dernière connexion
@@ -171,7 +256,7 @@ class AuthService {
               user.displayName ??
               docSnapshot.get('displayName') ??
               'Utilisateur',
-          'photoURL': user.photoURL ?? docSnapshot.get('photoURL'),
+          'photoURL': photoURL ?? user.photoURL ?? docSnapshot.get('photoURL'),
         });
       }
     }

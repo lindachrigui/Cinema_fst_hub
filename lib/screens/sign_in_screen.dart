@@ -5,6 +5,7 @@ import '../widgets/social_login_button.dart';
 import '../services/auth_service.dart';
 import 'sign_up_screen.dart';
 import 'home_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -51,18 +52,45 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       if (user != null && mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Connexion réussie!')));
-        // Navigation vers l'écran principal
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Vérifier le rôle de l'utilisateur
+        final role = await _authService.getUserRole();
+
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Connexion réussie!')));
+
+          // Navigation selon le rôle
+          if (role == 'admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AdminDashboardScreen(),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        }
+      }
+    } on Exception catch (e) {
+      if (mounted) {
+        String errorMessage = 'Erreur de connexion';
+        if (e.toString().contains('wrong-password')) {
+          errorMessage = 'Mot de passe incorrect';
+        } else if (e.toString().contains('user-not-found')) {
+          errorMessage = 'Aucun compte trouvé avec cet email';
+        } else if (e.toString().contains('invalid-email')) {
+          errorMessage = 'Email invalide';
+        }
+        _showErrorDialog(errorMessage);
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog(e.toString());
+        _showErrorDialog('Erreur: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -108,14 +136,29 @@ class _SignInScreenState extends State<SignInScreen> {
       final user = await _authService.signInWithGoogle();
 
       if (user != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Connexion Google réussie!')),
-        );
-        // Navigation vers l'écran principal
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Vérifier le rôle de l'utilisateur
+        final role = await _authService.getUserRole();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Connexion Google réussie!')),
+          );
+
+          // Navigation selon le rôle
+          if (role == 'admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AdminDashboardScreen(),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -182,8 +225,8 @@ class _SignInScreenState extends State<SignInScreen> {
 
               // Email field
               CustomTextField(
-                hintText: 'Username or Email',
-                prefixIcon: Icons.person_outline,
+                hintText: 'Email',
+                prefixIcon: Icons.email_outlined,
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
               ),

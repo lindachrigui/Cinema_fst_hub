@@ -5,6 +5,9 @@ import '../widgets/social_login_button.dart';
 import '../services/auth_service.dart';
 import 'sign_in_screen.dart';
 import 'home_screen.dart';
+import 'admin_dashboard_screen.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -24,6 +27,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final AuthService _authService = AuthService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -31,6 +35,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   String? _passwordError;
   String? _confirmPasswordError;
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageName;
 
   @override
   void dispose() {
@@ -57,6 +63,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 75,
+      );
+
+      if (image != null) {
+        final Uint8List imageBytes = await image.readAsBytes();
+        setState(() {
+          _selectedImageBytes = imageBytes;
+          _selectedImageName = image.name;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur de sélection d\'image: $e')),
+        );
+      }
+    }
+  }
+
   void _validatePasswords() {
     setState(() {
       _passwordError = null;
@@ -79,8 +110,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    if (_emailController.text.trim().isEmpty) {
-      _showErrorDialog('Veuillez entrer une adresse email');
+    if (_firstNameController.text.trim().isEmpty ||
+        _lastNameController.text.trim().isEmpty ||
+        _emailController.text.trim().isEmpty) {
+      _showErrorDialog('Veuillez remplir tous les champs obligatoires');
       return;
     }
 
@@ -89,20 +122,47 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
+      // Construire la date de naissance
+      String dateOfBirth = '';
+      if (_monthController.text.isNotEmpty &&
+          _dayController.text.isNotEmpty &&
+          _yearController.text.isNotEmpty) {
+        dateOfBirth =
+            '${_monthController.text}/${_dayController.text}/${_yearController.text}';
+      }
+
       final user = await _authService.registerWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        dateOfBirth: dateOfBirth,
       );
 
       if (user != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Compte créé avec succès!')),
-        );
-        // Retourner à l'écran de connexion
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const SignInScreen()),
-        );
+        // Vérifier le rôle de l'utilisateur
+        final role = await _authService.getUserRole();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Compte créé avec succès!')),
+          );
+
+          // Navigation selon le rôle
+          if (role == 'admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AdminDashboardScreen(),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -152,14 +212,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
       final user = await _authService.signUpWithGoogle();
 
       if (user != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Inscription Google réussie!')),
-        );
-        // Navigation vers l'écran principal
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Vérifier le rôle de l'utilisateur
+        final role = await _authService.getUserRole();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Inscription Google réussie!')),
+          );
+
+          // Navigation selon le rôle
+          if (role == 'admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AdminDashboardScreen(),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -233,6 +308,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 prefixIcon: Icons.person_outline,
                 controller: _lastNameController,
                 keyboardType: TextInputType.name,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Email field
+              CustomTextField(
+                hintText: 'Email',
+                prefixIcon: Icons.email_outlined,
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
               ),
 
               const SizedBox(height: 16),
@@ -366,31 +451,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               // Upload Image button
               InkWell(
-                onTap: () {
-                  // TODO: Implement image picker
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Upload image functionality')),
-                  );
-                },
+                onTap: _pickImage,
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E1E1E),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[800]!),
+                    border: Border.all(
+                      color: _selectedImageBytes != null
+                          ? const Color(0xFF6B46C1)
+                          : Colors.grey[800]!,
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.photo_camera,
-                        color: Colors.grey[400],
+                        _selectedImageBytes != null
+                            ? Icons.check_circle
+                            : Icons.photo_camera,
+                        color: _selectedImageBytes != null
+                            ? const Color(0xFF6B46C1)
+                            : Colors.grey[400],
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Photo',
-                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                        _selectedImageBytes != null
+                            ? _selectedImageName ?? 'Image sélectionnée'
+                            : 'Photo',
+                        style: TextStyle(
+                          color: _selectedImageBytes != null
+                              ? const Color(0xFF6B46C1)
+                              : Colors.grey[400],
+                          fontSize: 16,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

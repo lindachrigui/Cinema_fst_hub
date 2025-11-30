@@ -83,7 +83,14 @@ class MovieDbApiService {
     String query, {
     int page = 1,
   }) async {
+    if (_useMockData) {
+      print('🔍 Mode DEMO - Recherche mockée pour: "$query"');
+      await Future.delayed(const Duration(milliseconds: 500));
+      return _searchMockMovies(query);
+    }
+
     try {
+      print('🔍 Recherche API pour: "$query"');
       final response = await http.get(
         Uri.parse('$_baseUrl/titles/search/title/$query?page=$page&limit=20'),
         headers: _headers,
@@ -91,12 +98,18 @@ class MovieDbApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['results'] ?? []);
+        final results = List<Map<String, dynamic>>.from(data['results'] ?? []);
+        print('✅ Trouvé ${results.length} résultats pour "$query"');
+        return results;
       } else {
+        print('❌ Erreur API recherche: ${response.statusCode}');
         throw Exception('Erreur API: ${response.statusCode}');
       }
     } catch (e) {
-      print('Erreur lors de la recherche de films: $e');
+      print('❌ Erreur lors de la recherche de films: $e');
+      print(
+        '💡 Conseil: Utilisez le mode mock (_useMockData = true) pour tester',
+      );
       return [];
     }
   }
@@ -605,5 +618,43 @@ class MovieDbApiService {
         'ratingsSummary': {'aggregateRating': 6.6},
       },
     ];
+  }
+
+  // Recherche dans les films mockés
+  List<Map<String, dynamic>> _searchMockMovies(String query) {
+    final List<Map<String, dynamic>> allMovies = [
+      ..._getMockMovies(),
+      ..._getMockNewReleases(),
+    ];
+
+    if (query.trim().isEmpty) {
+      return allMovies;
+    }
+
+    final queryLower = query.toLowerCase();
+
+    final List<Map<String, dynamic>> results = allMovies
+        .where((movie) {
+          final title = (movie['titleText']?['text'] ?? '')
+              .toString()
+              .toLowerCase();
+          final genres = movie['genres']?['genres'] as List?;
+          final genreText =
+              genres?.map((g) => g['text']).join(' ').toLowerCase() ?? '';
+          final plot = (movie['plot']?['plotText']?['plainText'] ?? '')
+              .toString()
+              .toLowerCase();
+
+          return title.contains(queryLower) ||
+              genreText.contains(queryLower) ||
+              plot.contains(queryLower);
+        })
+        .toList()
+        .cast<Map<String, dynamic>>();
+
+    print(
+      '🔍 Recherche mock: "${query}" - ${results.length} résultats trouvés',
+    );
+    return results;
   }
 }

@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import '../services/user_service.dart';
+import '../services/storage_service.dart';
+import '../models/user_model.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
 
@@ -11,71 +16,130 @@ class UpdateProfileScreen extends StatefulWidget {
 }
 
 class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
-  final TextEditingController _monthController = TextEditingController();
-  final TextEditingController _dayController = TextEditingController();
-  final TextEditingController _yearController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
-  bool _isLoading = false;
+  final UserService _userService = UserService();
+  final StorageService _storageService = StorageService();
+  final TextEditingController _displayNameController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
+  bool _isLoading = true;
+  bool _isSaving = false;
+  UserModel? _currentProfile;
+  String? _newPhotoPath;
 
   @override
   void initState() {
     super.initState();
-    final user = FirebaseAuth.instance.currentUser;
-    if (user?.displayName != null) {
-      final names = user!.displayName!.split(' ');
-      _firstNameController.text = names.first;
-      if (names.length > 1) {
-        _lastNameController.text = names.sublist(1).join(' ');
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final profile = await _userService.getUserById(user.uid);
+        setState(() {
+          _currentProfile = profile;
+          _displayNameController.text = profile?.displayName ?? '';
+          _bioController.text = profile?.bio ?? '';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur de chargement: $e')));
       }
     }
   }
 
-  @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _monthController.dispose();
-    _dayController.dispose();
-    _yearController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _newPhotoPath = pickedFile.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur de sélection: $e')));
+      }
+    }
   }
 
-  void _handleUpdateProfile() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _handleUpdateProfile() async {
+    if (_displayNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Le nom est requis')));
+      return;
+    }
+
+    setState(() => _isSaving = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final displayName =
-            '${_firstNameController.text} ${_lastNameController.text}';
-        await user.updateDisplayName(displayName);
+        String? photoURL = _currentProfile?.photoURL;
+
+        // Upload new photo if selected
+        if (_newPhotoPath != null) {
+          final bytes = await File(_newPhotoPath!).readAsBytes();
+          photoURL = await _storageService.uploadProfileImage(bytes, user.uid);
+        }
+
+        // Update Firestore user profile
+        await _userService.updateUser(user.uid, {
+          'displayName': _displayNameController.text.trim(),
+          'bio': _bioController.text.trim(),
+          if (photoURL != null) 'photoURL': photoURL,
+        });
+
+        // Update Firebase Auth display name
+        await user.updateDisplayName(_displayNameController.text.trim());
+        if (photoURL != null) {
+          await user.updatePhotoURL(photoURL);
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile updated successfully!')),
+            const SnackBar(
+              content: Text('Profil mis à jour avec succès!'),
+              backgroundColor: Color(0xFF6B46C1),
+            ),
           );
-          Navigator.pop(context);
+          Navigator.pop(context, true); // Return true to indicate success
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isSaving = false);
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _displayNameController.dispose();
+    _bioController.dispose();
+    super.dispose();
   }
 
   @override
@@ -85,184 +149,204 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with back button
-                Row(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E1E),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 30),
-
-                // Profile Picture
-                Center(
-                  child: Stack(
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF6B46C1)),
+              )
+            : SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.grey[800],
-                        backgroundImage: user?.photoURL != null
-                            ? NetworkImage(user!.photoURL!)
-                            : null,
-                        child: user?.photoURL == null
-                            ? Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Colors.grey[600],
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6B46C1),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black, width: 2),
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.white,
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 16,
+                          const Text(
+                            'Modifier le profil',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 48),
+                        ],
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // Profile Picture
+                      Center(
+                        child: GestureDetector(
+                          onTap: _pickImage,
+                          child: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundColor: const Color(0xFF6B46C1),
+                                backgroundImage: _newPhotoPath != null
+                                    ? FileImage(File(_newPhotoPath!))
+                                          as ImageProvider
+                                    : (_currentProfile?.photoURL != null
+                                          ? NetworkImage(
+                                              _currentProfile!.photoURL!,
+                                            )
+                                          : null),
+                                child:
+                                    _newPhotoPath == null &&
+                                        _currentProfile?.photoURL == null
+                                    ? Text(
+                                        (_currentProfile?.displayName ??
+                                                user?.email ??
+                                                'U')
+                                            .substring(0, 1)
+                                            .toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF6B46C1),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
+
+                      const SizedBox(height: 8),
+
+                      const Center(
+                        child: Text(
+                          'Toucher pour changer la photo',
+                          style: TextStyle(
+                            color: Color(0xFF6B46C1),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // Display Name
+                      const Text(
+                        'Nom d\'affichage',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      CustomTextField(
+                        hintText: 'Votre nom',
+                        prefixIcon: Icons.person_outline,
+                        controller: _displayNameController,
+                        keyboardType: TextInputType.name,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Bio
+                      const Text(
+                        'Biographie',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _bioController,
+                        maxLines: 4,
+                        maxLength: 200,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Parlez-nous de vous...',
+                          hintStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: const Color(0xFF1E1E1E),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          counterStyle: const TextStyle(color: Colors.grey),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Email (read-only)
+                      const Text(
+                        'Email',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.email_outlined,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              user?.email ?? '',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // Save Button
+                      CustomButton(
+                        text: _isSaving
+                            ? 'Enregistrement...'
+                            : 'Enregistrer les modifications',
+                        onPressed: _isSaving ? () {} : _handleUpdateProfile,
+                        isLoading: _isSaving,
+                      ),
+
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 8),
-
-                const Center(
-                  child: Text(
-                    'Change Picture',
-                    style: TextStyle(color: Color(0xFF6B46C1), fontSize: 14),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // First Name
-                CustomTextField(
-                  hintText: 'First Name',
-                  prefixIcon: Icons.person_outline,
-                  controller: _firstNameController,
-                  keyboardType: TextInputType.name,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Last Name
-                CustomTextField(
-                  hintText: 'Last Name',
-                  prefixIcon: Icons.person_outline,
-                  controller: _lastNameController,
-                  keyboardType: TextInputType.name,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Date of birth label
-                const Text(
-                  'Date of birth',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Date of birth fields (MM/DD/YYYY)
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: CustomTextField(
-                        hintText: 'MM',
-                        prefixIcon: Icons.calendar_today,
-                        controller: _monthController,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: CustomTextField(
-                        hintText: 'DD',
-                        prefixIcon: Icons.calendar_today,
-                        controller: _dayController,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 3,
-                      child: CustomTextField(
-                        hintText: 'YYYY',
-                        prefixIcon: Icons.calendar_today,
-                        controller: _yearController,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Password field
-                CustomTextField(
-                  hintText: 'Password',
-                  prefixIcon: Icons.lock_outline,
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _isPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                      color: Colors.grey[400],
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Update Profile button
-                CustomButton(
-                  text: 'Update profile',
-                  onPressed: _handleUpdateProfile,
-                  isLoading: _isLoading,
-                ),
-
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }

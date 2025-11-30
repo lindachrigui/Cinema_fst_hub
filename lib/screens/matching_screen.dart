@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'matching_detail_screen.dart';
 import 'home_screen.dart';
 import 'favourite_movies_screen.dart';
 import 'profile_screen.dart';
+import '../services/matching_service.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({super.key});
@@ -13,46 +15,51 @@ class MatchingScreen extends StatefulWidget {
 
 class _MatchingScreenState extends State<MatchingScreen> {
   int _selectedIndex = 1;
+  final MatchingService _matchingService = MatchingService();
+  List<Map<String, dynamic>> _matchingUsers = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _users = [
-    {'name': 'Jane Cooper', 'role': 'Role', 'image': '', 'matchPercentage': 86},
-    {
-      'name': 'Devon Lane',
-      'phone': '(704) 555-0127',
-      'image': '',
-      'matchPercentage': 75,
-    },
-    {
-      'name': 'Darrell Steward',
-      'phone': '(684) 555-0102',
-      'image': '',
-      'matchPercentage': 82,
-    },
-    {
-      'name': 'Devon Lane',
-      'phone': '(704) 555-0127',
-      'image': '',
-      'matchPercentage': 68,
-    },
-    {
-      'name': 'Courtney Henry',
-      'phone': '(505) 555-0125',
-      'image': '',
-      'matchPercentage': 91,
-    },
-    {
-      'name': 'Wade Warren',
-      'phone': '(225) 555-0118',
-      'image': '',
-      'matchPercentage': 79,
-    },
-    {
-      'name': 'Bessie Cooper',
-      'phone': '(406) 555-0120',
-      'image': '',
-      'matchPercentage': 88,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadMatchingUsers();
+  }
+
+  Future<void> _loadMatchingUsers() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final allMatches = await _matchingService.findMatchingUsers(limit: 50);
+        // Filtrer ceux avec plus de 75% de correspondance
+        final matches = allMatches
+            .where((m) => m['matchPercentage'] >= 75)
+            .toList();
+
+        // Calculer le nombre de films en commun pour chaque utilisateur
+        for (var match in matches) {
+          final commonMovies = await _matchingService.getCommonMovies(
+            match['id'],
+          );
+          match['commonMoviesCount'] = commonMovies.length;
+          match['userId'] = match['id'];
+          match['displayName'] = match['name'];
+        }
+
+        setState(() {
+          _matchingUsers = matches;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      }
+    }
+  }
 
   void _onNavItemTapped(int index) {
     if (index == 0) {
@@ -91,7 +98,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.0),
               child: Text(
-                'USERS WITH OVER 75% OF CORRESPONDENCE',
+                'UTILISATEURS AVEC PLUS DE 75% DE CORRESPONDANCE',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -105,13 +112,49 @@ class _MatchingScreenState extends State<MatchingScreen> {
 
             // Users List
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                itemCount: _users.length,
-                itemBuilder: (context, index) {
-                  return _buildUserCard(_users[index]);
-                },
-              ),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF6B46C1),
+                      ),
+                    )
+                  : _matchingUsers.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            color: Colors.grey[700],
+                            size: 64,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Aucune correspondance trouvée',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Ajoutez plus de films à vos favoris',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadMatchingUsers,
+                      color: const Color(0xFF6B46C1),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        itemCount: _matchingUsers.length,
+                        itemBuilder: (context, index) {
+                          return _buildUserCard(_matchingUsers[index]);
+                        },
+                      ),
+                    ),
             ),
           ],
         ),
@@ -168,15 +211,18 @@ class _MatchingScreenState extends State<MatchingScreen> {
   }
 
   Widget _buildUserCard(Map<String, dynamic> user) {
+    final matchPercentage = user['matchPercentage'] ?? 0;
+    final commonMoviesCount = user['commonMoviesCount'] ?? 0;
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => MatchingDetailScreen(
-              userName: user['name'],
-              matchPercentage: user['matchPercentage'],
-              userImage: user['image'],
+              userId: user['userId'],
+              userName: user['displayName'] ?? user['email'],
+              matchPercentage: matchPercentage,
             ),
           ),
         );
@@ -187,14 +233,35 @@ class _MatchingScreenState extends State<MatchingScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: matchPercentage >= 90
+                ? const Color(0xFF6B46C1)
+                : Colors.transparent,
+            width: 1.5,
+          ),
         ),
         child: Row(
           children: [
-            // User Avatar
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.grey[800],
-              child: Icon(Icons.person, color: Colors.grey[600], size: 24),
+            // Match Percentage Badge
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: matchPercentage >= 90
+                    ? const Color(0xFF6B46C1)
+                    : const Color(0xFF2A2A2A),
+              ),
+              child: Center(
+                child: Text(
+                  '${matchPercentage.toInt()}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
 
             const SizedBox(width: 16),
@@ -205,7 +272,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user['name'],
+                    user['displayName'] ?? user['email'] ?? 'Utilisateur',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -213,9 +280,22 @@ class _MatchingScreenState extends State<MatchingScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    user['role'] ?? user['phone'] ?? '',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.favorite,
+                        color: Color(0xFF6B46C1),
+                        size: 14,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$commonMoviesCount films en commun',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

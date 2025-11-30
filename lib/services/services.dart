@@ -6,3 +6,7 @@ export 'user_service.dart';
 export 'storage_service.dart';
 export 'firebase_constants.dart';
 export 'moviedb_api_service.dart';
+export 'favorite_service.dart';
+export 'matching_service.dart';
+export 'search_service.dart';
+export 'notification_service.dart';

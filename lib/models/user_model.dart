@@ -8,6 +8,7 @@ class UserModel {
   final String displayName;
   final String dateOfBirth;
   final String photoURL;
+  final String bio;
   final String role; // 'user' ou 'admin'
   final bool isActive;
   final String authProvider; // 'email', 'google', etc.
@@ -23,6 +24,7 @@ class UserModel {
     required this.displayName,
     this.dateOfBirth = '',
     this.photoURL = '',
+    this.bio = '',
     this.role = 'user',
     this.isActive = true,
     this.authProvider = 'email',
@@ -42,6 +44,7 @@ class UserModel {
       displayName: data['displayName'] ?? '',
       dateOfBirth: data['dateOfBirth'] ?? '',
       photoURL: data['photoURL'] ?? '',
+      bio: data['bio'] ?? '',
       role: data['role'] ?? 'user',
       isActive: data['isActive'] ?? true,
       authProvider: data['authProvider'] ?? 'email',
@@ -67,6 +70,7 @@ class UserModel {
       'displayName': displayName,
       'dateOfBirth': dateOfBirth,
       'photoURL': photoURL,
+      'bio': bio,
       'role': role,
       'isActive': isActive,
       'authProvider': authProvider,
@@ -89,6 +93,7 @@ class UserModel {
     String? displayName,
     String? dateOfBirth,
     String? photoURL,
+    String? bio,
     String? role,
     bool? isActive,
     String? authProvider,
@@ -104,6 +109,7 @@ class UserModel {
       displayName: displayName ?? this.displayName,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       photoURL: photoURL ?? this.photoURL,
+      bio: bio ?? this.bio,
       role: role ?? this.role,
       isActive: isActive ?? this.isActive,
       authProvider: authProvider ?? this.authProvider,

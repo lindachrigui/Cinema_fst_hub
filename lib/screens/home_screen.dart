@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'search_screen.dart';
-import 'movie_detail_screen.dart';
 import 'favourite_movies_screen.dart';
 import 'profile_screen.dart';
 import 'matching_screen.dart';
+import 'api_movie_detail_screen.dart';
 import '../services/moviedb_api_service.dart';
+import '../services/user_service.dart';
 import '../models/api_movie_model.dart';
+import '../models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,17 +20,39 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final MovieDbApiService _apiService = MovieDbApiService();
+  final UserService _userService = UserService();
 
   List<ApiMovie> _popularMovies = [];
   List<ApiMovie> _newReleases = [];
   ApiMovie? _trendingMovie;
   bool _isLoading = true;
   String? _error;
+  UserModel? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadMovies();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await Future.wait([_loadUserProfile(), _loadMovies()]);
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        final user = await _userService.getUserById(userId);
+        if (mounted) {
+          setState(() {
+            _currentUser = user;
+          });
+        }
+      }
+    } catch (e) {
+      print('Erreur chargement profil: $e');
+    }
   }
 
   Future<void> _loadMovies() async {
@@ -144,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: _loadMovies,
+                      onPressed: _loadData,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6B46C1),
                       ),
@@ -154,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: _loadMovies,
+                onRefresh: _loadData,
                 color: const Color(0xFF6B46C1),
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -171,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'HEY, ${user?.displayName?.split(' ').first.toUpperCase() ?? 'LINDA'}',
+                                  'HEY, ${_currentUser?.displayName.split(' ').first.toUpperCase() ?? user?.displayName?.split(' ').first.toUpperCase() ?? user?.email?.split('@').first.toUpperCase() ?? 'USER'}',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -179,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 const Text(
-                                  'Karangamal >',
+                                  'Bienvenue >',
                                   style: TextStyle(
                                     color: Color(0xFF6B46C1),
                                     fontSize: 14,
@@ -298,7 +322,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Center(
                                         child: GestureDetector(
                                           onTap: () {
-                                            // TODO: Ouvrir le trailer
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    ApiMovieDetailScreen(
+                                                      movie: _trendingMovie!,
+                                                    ),
+                                              ),
+                                            );
                                           },
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(
@@ -472,7 +504,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                     final movie = _popularMovies[index];
                                     return GestureDetector(
                                       onTap: () {
-                                        // TODO: Navigate to movie details
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ApiMovieDetailScreen(
+                                                  movie: movie,
+                                                ),
+                                          ),
+                                        );
                                       },
                                       child: Container(
                                         width: 140,
@@ -673,7 +713,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                     final movie = _newReleases[index];
                                     return GestureDetector(
                                       onTap: () {
-                                        // TODO: Navigate to movie details
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ApiMovieDetailScreen(
+                                                  movie: movie,
+                                                ),
+                                          ),
+                                        );
                                       },
                                       child: Container(
                                         width: 140,

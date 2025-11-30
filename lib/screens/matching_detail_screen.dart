@@ -1,21 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math' as math;
-import 'home_screen.dart';
-import 'matching_screen.dart';
-import 'favourite_movies_screen.dart';
-import 'profile_screen.dart';
+import '../services/matching_service.dart';
+import '../services/user_service.dart';
+import '../models/user_model.dart';
 
-class MatchingDetailScreen extends StatelessWidget {
+class MatchingDetailScreen extends StatefulWidget {
+  final String userId;
   final String userName;
   final int matchPercentage;
-  final String userImage;
 
   const MatchingDetailScreen({
     super.key,
+    required this.userId,
     required this.userName,
     required this.matchPercentage,
-    this.userImage = '',
   });
+
+  @override
+  State<MatchingDetailScreen> createState() => _MatchingDetailScreenState();
+}
+
+class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
+  final MatchingService _matchingService = MatchingService();
+  final UserService _userService = UserService();
+  List<Map<String, dynamic>> _commonMovies = [];
+  UserModel? _userProfile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final profile = await _userService.getUserById(widget.userId);
+        final movies = await _matchingService.getCommonMovies(widget.userId);
+
+        setState(() {
+          _userProfile = profile;
+          _commonMovies = movies;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +64,7 @@ class MatchingDetailScreen extends StatelessWidget {
       backgroundColor: Colors.black,
       body: Column(
         children: [
-          // Header with back button and title
+          // Header with back button
           SafeArea(
             bottom: false,
             child: Padding(
@@ -43,10 +84,10 @@ class MatchingDetailScreen extends StatelessWidget {
                   const Expanded(
                     child: Center(
                       child: Text(
-                        'M',
+                        'Détails de correspondance',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -60,272 +101,196 @@ class MatchingDetailScreen extends StatelessWidget {
 
           // Scrollable content
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF6B46C1)),
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20),
 
-                  // User Info
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.grey[800],
-                    child: Icon(
-                      Icons.person,
-                      color: Colors.grey[600],
-                      size: 40,
-                    ),
-                  ),
+                        // User Info
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: const Color(0xFF6B46C1),
+                          child: Text(
+                            (_userProfile?.displayName ?? widget.userName)
+                                .substring(0, 1)
+                                .toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
 
-                  const SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
-                  Text(
-                    userName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  Text(
-                    '15 min',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Percentage of Match
-                  const Text(
-                    'PERCENTAGE OF MATCH',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Circular Progress Indicator
-                  SizedBox(
-                    width: 180,
-                    height: 180,
-                    child: CustomPaint(
-                      painter: CircularProgressPainter(
-                        percentage: matchPercentage,
-                        color: const Color(0xFF6B46C1),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$matchPercentage%',
+                        Text(
+                          _userProfile?.displayName ?? widget.userName,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 40),
+                        if (_userProfile?.bio != null &&
+                            _userProfile!.bio.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              _userProfile!.bio,
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 14,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
 
-                  // Same movie watch section
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Same movie watch',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(height: 40),
+
+                        // Percentage of Match
+                        const Text(
+                          'POURCENTAGE DE CORRESPONDANCE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
                         ),
-                      ),
+
+                        const SizedBox(height: 30),
+
+                        // Circular Progress Indicator
+                        SizedBox(
+                          width: 180,
+                          height: 180,
+                          child: CustomPaint(
+                            painter: CircularProgressPainter(
+                              percentage: widget.matchPercentage,
+                              color: const Color(0xFF6B46C1),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${widget.matchPercentage}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // Common movies section
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Films en commun (${_commonMovies.length})',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Movies List
+                        if (_commonMovies.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(40),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.movie_outlined,
+                                  color: Colors.grey[700],
+                                  size: 48,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Aucun film en commun',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            height: 200,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _commonMovies.length,
+                              itemBuilder: (context, index) {
+                                return _buildMovieCard(_commonMovies[index]);
+                              },
+                            ),
+                          ),
+
+                        const SizedBox(height: 30),
+                      ],
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // Movies List
-                  SizedBox(
-                    height: 180,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      scrollDirection: Axis.horizontal,
-                      itemCount: 3,
-                      itemBuilder: (context, index) {
-                        final titles = [
-                          'SALAAR (PART 1)',
-                          'FLASH (2023)',
-                          'AQUAMAN 2',
-                        ];
-                        return _buildMovieCard(titles[index]);
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-                ],
-              ),
-            ),
-          ),
-
-          // Bottom Navigation Bar
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      context: context,
-                      icon: Icons.movie_outlined,
-                      label: '',
-                      isSelected: false,
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HomeScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildNavItem(
-                      context: context,
-                      icon: Icons.people_outline,
-                      label: 'Match',
-                      isSelected: true,
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MatchingScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildNavItem(
-                      context: context,
-                      icon: Icons.favorite_outline,
-                      label: '',
-                      isSelected: false,
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const FavouriteMoviesScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildNavItem(
-                      context: context,
-                      icon: Icons.more_horiz,
-                      label: '',
-                      isSelected: false,
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMovieCard(String title) {
+  Widget _buildMovieCard(Map<String, dynamic> movie) {
     return Container(
       width: 120,
       margin: const EdgeInsets.only(right: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Icon(Icons.movie, color: Colors.grey[700], size: 40),
+          Container(
+            height: 160,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E1E),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.movie, color: Colors.grey, size: 32),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      movie['title'] ?? 'Sans titre',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6B46C1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            if (label.isNotEmpty && isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }

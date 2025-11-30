@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'movie_detail_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'search_screen.dart';
 import 'home_screen.dart';
 import 'matching_screen.dart';
+import '../services/favorite_service.dart';
+import '../services/moviedb_api_service.dart';
+import '../models/api_movie_model.dart';
+import 'api_movie_detail_screen.dart';
 
 class FavouriteMoviesScreen extends StatefulWidget {
   const FavouriteMoviesScreen({super.key});
@@ -13,12 +17,8 @@ class FavouriteMoviesScreen extends StatefulWidget {
 
 class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
   int _selectedIndex = 2;
-
-  final List<Map<String, String>> _favouriteMovies = [
-    {'title': 'SALAAR (PART 1)', 'image': 'assets/images/salaar.jpg'},
-    {'title': 'FLASH (2023)', 'image': 'assets/images/flash.jpg'},
-    {'title': 'AQUAMAN 2', 'image': 'assets/images/aquaman.jpg'},
-  ];
+  final FavoriteService _favoriteService = FavoriteService();
+  final MovieDbApiService _apiService = MovieDbApiService();
 
   void _onNavItemTapped(int index) {
     if (index == 0) {
@@ -47,6 +47,8 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -62,16 +64,16 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'HEY, LINDA',
-                        style: TextStyle(
+                      Text(
+                        'HEY, ${user?.displayName?.split(' ').first.toUpperCase() ?? 'USER'}',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const Text(
-                        'Karangamal >',
+                        'Mes Favoris',
                         style: TextStyle(
                           color: Color(0xFF6B46C1),
                           fontSize: 14,
@@ -94,16 +96,6 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
                               builder: (context) => const SearchScreen(),
                             ),
                           );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.person_outline,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        onPressed: () {
-                          // Navigate to profile
                         },
                       ),
                     ],
@@ -131,16 +123,74 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.65,
-                  ),
-                  itemCount: _favouriteMovies.length,
-                  itemBuilder: (context, index) {
-                    return _buildMovieCard(_favouriteMovies[index]);
+                child: StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: _favoriteService.getUserFavorites(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF6B46C1),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Erreur: ${snapshot.error}',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      );
+                    }
+
+                    final favorites = snapshot.data ?? [];
+
+                    if (favorites.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.favorite_border,
+                              size: 80,
+                              color: Colors.grey[700],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Aucun film favori',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Ajoutez des films à vos favoris\npour les retrouver ici',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return GridView.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 0.65,
+                          ),
+                      itemCount: favorites.length,
+                      itemBuilder: (context, index) {
+                        return _buildMovieCard(favorites[index]);
+                      },
+                    );
                   },
                 ),
               ),
@@ -199,18 +249,30 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
     );
   }
 
-  Widget _buildMovieCard(Map<String, String> movie) {
+  Widget _buildMovieCard(Map<String, dynamic> favorite) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MovieDetailScreen(
-              movieTitle: movie['title']!,
-              movieImage: movie['image']!,
-            ),
-          ),
-        );
+      onTap: () async {
+        // Récupérer les détails du film depuis l'API
+        try {
+          final movieDetails = await _apiService.getMovieDetails(
+            favorite['movieId'],
+          );
+          if (movieDetails != null) {
+            final movieData = _apiService.convertToMovieModel(movieDetails);
+            final movie = ApiMovie.fromJson(movieData);
+
+            if (mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ApiMovieDetailScreen(movie: movie),
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          print('Erreur chargement détails: $e');
+        }
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,19 +286,36 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
               ),
               child: Stack(
                 children: [
-                  // Placeholder for movie image
+                  // Movie image
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       width: double.infinity,
                       color: Colors.grey[850],
-                      child: Center(
-                        child: Icon(
-                          Icons.movie,
-                          color: Colors.grey[700],
-                          size: 40,
-                        ),
-                      ),
+                      child:
+                          favorite['movieImage'] != null &&
+                              favorite['movieImage'].toString().isNotEmpty
+                          ? Image.network(
+                              favorite['movieImage'],
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Icon(
+                                    Icons.movie,
+                                    color: Colors.grey[700],
+                                    size: 40,
+                                  ),
+                                );
+                              },
+                            )
+                          : Center(
+                              child: Icon(
+                                Icons.movie,
+                                color: Colors.grey[700],
+                                size: 40,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -284,7 +363,7 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
 
           // Movie Title
           Text(
-            movie['title']!,
+            favorite['movieTitle'] ?? 'Sans titre',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 11,
@@ -292,6 +371,18 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          // Rating
+          Row(
+            children: [
+              const Icon(Icons.star, color: Colors.amber, size: 12),
+              const SizedBox(width: 4),
+              Text(
+                (favorite['movieRating'] ?? 0.0).toStringAsFixed(1),
+                style: TextStyle(color: Colors.grey[400], fontSize: 10),
+              ),
+            ],
           ),
         ],
       ),

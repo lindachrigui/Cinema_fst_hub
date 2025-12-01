@@ -47,6 +47,41 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Future<void> _toggleUserStatus(String userId, bool isActive) async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text(
+          isActive ? 'Désactiver le compte' : 'Activer le compte',
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          isActive
+              ? 'Êtes-vous sûr de vouloir désactiver ce compte ?\n\nL\'utilisateur ne pourra plus se connecter.'
+              : 'Êtes-vous sûr de vouloir activer ce compte ?\n\nL\'utilisateur pourra à nouveau se connecter.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              isActive ? 'Désactiver' : 'Activer',
+              style: TextStyle(
+                color: isActive ? Colors.red : const Color(0xFF6B46C1),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     try {
       await _firestore.collection('users').doc(userId).update({
         'isActive': !isActive,
@@ -55,8 +90,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              isActive ? 'Utilisateur désactivé' : 'Utilisateur activé',
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 8),
+                Text(
+                  isActive
+                      ? 'Utilisateur désactivé avec succès'
+                      : 'Utilisateur activé avec succès',
+                ),
+              ],
             ),
             backgroundColor: const Color(0xFF6B46C1),
           ),
@@ -64,9 +107,18 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.red),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Erreur: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red[900],
+          ),
+        );
       }
     }
   }

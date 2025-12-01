@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
+import 'package:image/image.dart' as img;
+import '../services/movie_service.dart';
+import '../services/storage_service.dart';
+import '../models/movie_model.dart';
 
 class AdminAddFilmScreen extends StatefulWidget {
   const AdminAddFilmScreen({super.key});
@@ -17,7 +20,8 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
   final TextEditingController _minuteController = TextEditingController();
   final TextEditingController _secondController = TextEditingController();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final MovieService _movieService = MovieService();
+  final StorageService _storageService = StorageService();
   final ImagePicker _picker = ImagePicker();
 
   String _selectedGenre = 'romance';
@@ -64,30 +68,79 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
         source: ImageSource.gallery,
         maxWidth: 1920,
         maxHeight: 1080,
-        imageQuality: 85,
       );
 
       if (image != null) {
         final bytes = await image.readAsBytes();
+
+        // Compress image
+        final compressedBytes = await _compressImage(bytes);
+
         setState(() {
-          _selectedImageBytes = bytes;
+          _selectedImageBytes = compressedBytes;
           _selectedImageName = image.name;
         });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Image sélectionnée (${(compressedBytes.length / 1024).toStringAsFixed(0)} KB)',
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF6B46C1),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de sélection d\'image: $e')),
+          SnackBar(
+            content: Text('Erreur de sélection d\'image: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
+  Future<Uint8List> _compressImage(Uint8List bytes) async {
+    try {
+      final image = img.decodeImage(bytes);
+      if (image == null) return bytes;
+
+      // Resize to max 800x1200 for movie posters
+      final resized = img.copyResize(
+        image,
+        width: image.width > 800 ? 800 : image.width,
+        height: image.height > 1200 ? 1200 : image.height,
+      );
+
+      // Compress to JPEG with 75% quality
+      final compressed = img.encodeJpg(resized, quality: 75);
+      return Uint8List.fromList(compressed);
+    } catch (e) {
+      print('Erreur compression: $e');
+      return bytes;
+    }
+  }
+
   Future<void> _addFilm() async {
+    // Validation
     if (_titleController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Veuillez entrer un titre')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez entrer un titre'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -96,39 +149,130 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
     });
 
     try {
-      // Calculer la durée en secondes
+      String imageUrl = '';
+
+      // Upload image seulement si une image est sélectionnée
+      if (_selectedImageBytes != null) {
+        // Show upload progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Upload de l\'image en cours...'),
+              ],
+            ),
+            backgroundColor: Color(0xFF6B46C1),
+            duration: Duration(seconds: 30),
+          ),
+        );
+
+        // Upload image to Firebase Storage
+        final uploadedUrl = await _storageService
+            .uploadMovieImage(
+              _selectedImageBytes!,
+              _selectedImageName ?? 'movie_image.jpg',
+            )
+            .timeout(const Duration(seconds: 30), onTimeout: () => null);
+
+        if (uploadedUrl != null) {
+          imageUrl = uploadedUrl;
+        } else {
+          // Continue without image if upload fails
+          print('Upload échoué, film ajouté sans image');
+        }
+      }
+
+      // Calculate duration in seconds
       final hour = int.tryParse(_hourController.text) ?? 0;
       final minute = int.tryParse(_minuteController.text) ?? 0;
       final second = int.tryParse(_secondController.text) ?? 0;
       final totalSeconds = (hour * 3600) + (minute * 60) + second;
 
-      // Créer le document du film
-      await _firestore.collection('movies').add({
-        'title': _titleController.text.trim(),
-        'genre': _selectedGenre,
-        'description': _descriptionController.text.trim(),
-        'duration': totalSeconds,
-        'language': _selectedLanguage,
-        'imageUrl': '', // À implémenter avec Firebase Storage
-        'createdAt': FieldValue.serverTimestamp(),
-        'rating': 0.0,
-        'viewCount': 0,
-      });
+      // Create Movie object
+      final movie = Movie(
+        id: '', // Will be set by Firestore
+        title: _titleController.text.trim(),
+        genre: _selectedGenre,
+        description: _descriptionController.text.trim(),
+        duration: totalSeconds > 0
+            ? totalSeconds
+            : 7200, // Default 2h if not set
+        language: _selectedLanguage,
+        imageUrl: imageUrl,
+        rating: 0.0,
+        viewCount: 0,
+        createdAt: DateTime.now(),
+        cast: [],
+        director: '',
+        releaseYear: DateTime.now().year,
+        availableLanguages: [_selectedLanguage],
+      );
+
+      // Add movie to Firestore
+      final movieId = await _movieService.addMovie(movie);
+
+      if (movieId == null) {
+        throw Exception('Échec de l\'ajout du film');
+      }
 
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Film ajouté avec succès!'),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Film ajouté avec succès!'),
+              ],
+            ),
             backgroundColor: Color(0xFF6B46C1),
           ),
         );
-        Navigator.pop(context);
+
+        // Clear form
+        _titleController.clear();
+        _descriptionController.clear();
+        _hourController.clear();
+        _minuteController.clear();
+        _secondController.clear();
+        setState(() {
+          _selectedImageBytes = null;
+          _selectedImageName = null;
+          _selectedGenre = 'romance';
+          _selectedLanguage = 'English';
+        });
+
+        // Navigate back after a short delay
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.red),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Erreur: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red[900],
+          ),
+        );
       }
     } finally {
       if (mounted) {

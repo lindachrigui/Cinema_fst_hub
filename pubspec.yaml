@@ -47,6 +47,9 @@ dependencies:
   # Image picker
   image_picker: ^1.1.2
 
+  # Image compression and manipulation
+  image: ^4.1.7
+
   # HTTP requests for API calls
   http: ^1.2.0
 

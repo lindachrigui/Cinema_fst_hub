@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../services/user_service.dart';
 import '../services/storage_service.dart';
 import '../models/user_model.dart';
 import '../widgets/custom_text_field.dart';
-import '../widgets/custom_button.dart';
 
 class UpdateProfileScreen extends StatefulWidget {
   const UpdateProfileScreen({super.key});
@@ -24,6 +23,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   bool _isSaving = false;
   UserModel? _currentProfile;
   String? _newPhotoPath;
+  Uint8List? _webImageBytes;
 
   @override
   void initState() {
@@ -59,15 +59,28 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 85,
+        maxWidth: 400, // Réduit de 512 à 400
+        maxHeight: 400,
+        imageQuality: 70, // Réduit de 85 à 70 pour upload plus rapide
       );
 
       if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
         setState(() {
           _newPhotoPath = pickedFile.path;
+          _webImageBytes = bytes;
         });
+
+        // Afficher la taille de l'image
+        final sizeInKB = (bytes.length / 1024).toStringAsFixed(1);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image sélectionnée ($sizeInKB KB)'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -94,9 +107,38 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         String? photoURL = _currentProfile?.photoURL;
 
         // Upload new photo if selected
-        if (_newPhotoPath != null) {
-          final bytes = await File(_newPhotoPath!).readAsBytes();
-          photoURL = await _storageService.uploadProfileImage(bytes, user.uid);
+        if (_newPhotoPath != null && _webImageBytes != null) {
+          // Afficher un message pendant l'upload
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Text('Upload de la photo...'),
+                  ],
+                ),
+                duration: Duration(seconds: 10),
+              ),
+            );
+          }
+
+          photoURL = await _storageService
+              .uploadProfileImage(_webImageBytes!, user.uid)
+              .timeout(
+                const Duration(seconds: 30),
+                onTimeout: () {
+                  throw Exception('Upload timeout - Connexion trop lente');
+                },
+              );
         }
 
         // Update Firestore user profile
@@ -113,10 +155,20 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         }
 
         if (mounted) {
+          // Fermer tous les snackbars
+          ScaffoldMessenger.of(context).clearSnackBars();
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Profil mis à jour avec succès!'),
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Profil mis à jour avec succès!'),
+                ],
+              ),
               backgroundColor: Color(0xFF6B46C1),
+              duration: Duration(seconds: 2),
             ),
           );
           Navigator.pop(context, true); // Return true to indicate success
@@ -124,9 +176,20 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Erreur: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -199,8 +262,8 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                               CircleAvatar(
                                 radius: 60,
                                 backgroundColor: const Color(0xFF6B46C1),
-                                backgroundImage: _newPhotoPath != null
-                                    ? FileImage(File(_newPhotoPath!))
+                                backgroundImage: _webImageBytes != null
+                                    ? MemoryImage(_webImageBytes!)
                                           as ImageProvider
                                     : (_currentProfile?.photoURL != null
                                           ? NetworkImage(
@@ -208,7 +271,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                                             )
                                           : null),
                                 child:
-                                    _newPhotoPath == null &&
+                                    _webImageBytes == null &&
                                         _currentProfile?.photoURL == null
                                     ? Text(
                                         (_currentProfile?.displayName ??
@@ -251,12 +314,19 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
                       const SizedBox(height: 8),
 
-                      const Center(
+                      Center(
                         child: Text(
-                          'Toucher pour changer la photo',
+                          _webImageBytes != null
+                              ? '✓ Nouvelle photo sélectionnée'
+                              : 'Toucher pour changer la photo',
                           style: TextStyle(
-                            color: Color(0xFF6B46C1),
+                            color: _webImageBytes != null
+                                ? Colors.green
+                                : const Color(0xFF6B46C1),
                             fontSize: 14,
+                            fontWeight: _webImageBytes != null
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -334,12 +404,59 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                       const SizedBox(height: 40),
 
                       // Save Button
-                      CustomButton(
-                        text: _isSaving
-                            ? 'Enregistrement...'
-                            : 'Enregistrer les modifications',
-                        onPressed: _isSaving ? () {} : _handleUpdateProfile,
-                        isLoading: _isSaving,
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _handleUpdateProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6B46C1),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: Colors.grey[800],
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                          ),
+                          child: _isSaving
+                              ? const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Enregistrement en cours...',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.save, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _webImageBytes != null
+                                          ? 'Enregistrer avec nouvelle photo'
+                                          : 'Enregistrer les modifications',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
                       ),
 
                       const SizedBox(height: 20),

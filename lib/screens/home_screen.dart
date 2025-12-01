@@ -5,9 +5,12 @@ import 'favourite_movies_screen.dart';
 import 'profile_screen.dart';
 import 'matching_screen.dart';
 import 'api_movie_detail_screen.dart';
+import 'movie_detail_screen.dart';
 import '../services/moviedb_api_service.dart';
 import '../services/user_service.dart';
+import '../services/movie_service.dart';
 import '../models/api_movie_model.dart';
+import '../models/movie_model.dart';
 import '../models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -21,9 +24,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final MovieDbApiService _apiService = MovieDbApiService();
   final UserService _userService = UserService();
+  final MovieService _movieService = MovieService();
 
   List<ApiMovie> _popularMovies = [];
   List<ApiMovie> _newReleases = [];
+  List<Movie> _firestoreMovies = [];
   ApiMovie? _trendingMovie;
   bool _isLoading = true;
   String? _error;
@@ -33,10 +38,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _loadFirestoreMovies();
   }
 
   Future<void> _loadData() async {
     await Future.wait([_loadUserProfile(), _loadMovies()]);
+  }
+
+  void _loadFirestoreMovies() {
+    _movieService.getAllMovies().listen((movies) {
+      if (mounted) {
+        setState(() {
+          _firestoreMovies = movies;
+        });
+      }
+    });
   }
 
   Future<void> _loadUserProfile() async {
@@ -666,6 +682,214 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
 
                         const SizedBox(height: 30),
+
+                        // Firestore Movies Section (Admin Added)
+                        if (_firestoreMovies.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Films ajoutés',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6B46C1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${_firestoreMovies.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 250,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: EdgeInsets.zero,
+                              itemCount: _firestoreMovies.length,
+                              itemBuilder: (context, index) {
+                                final movie = _firestoreMovies[index];
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            MovieDetailScreen(movie: movie),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 140,
+                                    margin: EdgeInsets.only(
+                                      right: index < _firestoreMovies.length - 1
+                                          ? 16
+                                          : 0,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Movie Poster
+                                        Expanded(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Stack(
+                                              children: [
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  child:
+                                                      movie.imageUrl.isNotEmpty
+                                                      ? Image.network(
+                                                          movie.imageUrl,
+                                                          width:
+                                                              double.infinity,
+                                                          height:
+                                                              double.infinity,
+                                                          fit: BoxFit.cover,
+                                                          errorBuilder:
+                                                              (
+                                                                context,
+                                                                error,
+                                                                stackTrace,
+                                                              ) {
+                                                                return Container(
+                                                                  color: const Color(
+                                                                    0xFF1E1E1E,
+                                                                  ),
+                                                                  child: const Icon(
+                                                                    Icons.movie,
+                                                                    color: Color(
+                                                                      0xFF6B46C1,
+                                                                    ),
+                                                                    size: 50,
+                                                                  ),
+                                                                );
+                                                              },
+                                                        )
+                                                      : Container(
+                                                          color: const Color(
+                                                            0xFF1E1E1E,
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons.movie,
+                                                            color: Color(
+                                                              0xFF6B46C1,
+                                                            ),
+                                                            size: 50,
+                                                          ),
+                                                        ),
+                                                ),
+                                                Positioned(
+                                                  top: 8,
+                                                  right: 8,
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 4,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.black
+                                                          .withOpacity(0.7),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(
+                                                          Icons.star,
+                                                          color: Colors.amber,
+                                                          size: 12,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
+                                                        Text(
+                                                          movie.rating
+                                                              .toStringAsFixed(
+                                                                1,
+                                                              ),
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          movie.title,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          movie.genre,
+                                          style: TextStyle(
+                                            color: Colors.grey[500],
+                                            fontSize: 10,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                        ],
 
                         // New Releases Section
                         Row(

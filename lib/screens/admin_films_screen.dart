@@ -81,7 +81,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
           style: TextStyle(color: Colors.white),
         ),
         content: Text(
-          'Voulez-vous supprimer ${_selectedFilms.length} film(s) ?',
+          'Voulez-vous supprimer définitivement ${_selectedFilms.length} film(s) ?\n\nCette action est irréversible.',
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -99,14 +99,45 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
 
     if (confirm == true) {
       try {
+        // Show progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Suppression en cours...'),
+              ],
+            ),
+            backgroundColor: Color(0xFF6B46C1),
+            duration: Duration(seconds: 10),
+          ),
+        );
+
         for (String filmId in _selectedFilms) {
           await _firestore.collection('movies').doc(filmId).delete();
         }
 
         if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${_selectedFilms.length} film(s) supprimé(s)'),
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${_selectedFilms.length} film(s) supprimé(s) avec succès',
+                  ),
+                ],
+              ),
               backgroundColor: const Color(0xFF6B46C1),
             ),
           );
@@ -117,9 +148,19 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Erreur: $e')),
+                ],
+              ),
+              backgroundColor: Colors.red[900],
+            ),
+          );
         }
       }
     }
@@ -301,7 +342,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
                           crossAxisCount: 3,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          childAspectRatio: 0.65,
+                          childAspectRatio: 0.7,
                         ),
                     itemCount: movies.length,
                     itemBuilder: (context, index) {
@@ -310,12 +351,14 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
                       final movieId = movies[index].id;
                       final title = movieData['title'] ?? 'Sans titre';
                       final imageUrl = movieData['imageUrl'] ?? '';
+                      final rating = (movieData['rating'] ?? 0.0).toDouble();
                       final isSelected = _selectedFilms.contains(movieId);
 
                       return _buildMovieCard(
                         movieId: movieId,
                         title: title,
                         imageUrl: imageUrl,
+                        rating: rating,
                         isSelected: isSelected,
                       );
                     },
@@ -338,6 +381,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
     required String movieId,
     required String title,
     required String imageUrl,
+    required double rating,
     required bool isSelected,
   }) {
     return GestureDetector(
@@ -348,43 +392,115 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               color: const Color(0xFF1E1E1E),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    child: imageUrl.isNotEmpty
-                        ? Image.network(
-                            imageUrl,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[800],
-                                child: const Icon(
-                                  Icons.movie,
-                                  color: Colors.grey,
-                                  size: 50,
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        child: imageUrl.isNotEmpty
+                            ? Image.network(
+                                imageUrl,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        color: const Color(0xFF2A2A2A),
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            color: const Color(0xFF6B46C1),
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: const Color(0xFF2A2A2A),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.movie,
+                                        color: Color(0xFF6B46C1),
+                                        size: 50,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )
+                            : Container(
+                                color: const Color(0xFF2A2A2A),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.movie,
+                                    color: Color(0xFF6B46C1),
+                                    size: 50,
+                                  ),
                                 ),
-                              );
-                            },
-                          )
-                        : Container(
-                            color: Colors.grey[800],
-                            child: const Icon(
-                              Icons.movie,
-                              color: Colors.grey,
-                              size: 50,
+                              ),
+                      ),
+                      // Rating badge
+                      if (rating > 0)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  color: Colors.amber,
+                                  size: 12,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  rating.toStringAsFixed(1),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
+                    ],
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(10.0),
                   child: Text(
                     title.toUpperCase(),
                     style: const TextStyle(

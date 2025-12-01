@@ -67,6 +67,19 @@ class AuthService {
         throw Exception('Aucun utilisateur trouvé avec ce prénom');
       }
 
+      // Vérifier si le compte est actif (sauf pour les admins)
+      final userData = userQuery.docs.first.data() as Map<String, dynamic>;
+      final role = userData['role'] ?? 'user';
+
+      if (role != 'admin') {
+        final isActive = userData['isActive'] ?? true;
+        if (!isActive) {
+          throw Exception(
+            'Votre compte a été désactivé. Veuillez contacter l\'administrateur.',
+          );
+        }
+      }
+
       // Récupérer l'email de l'utilisateur
       String email = userQuery.docs.first.get('email');
 
@@ -75,6 +88,12 @@ class AuthService {
         email: email,
         password: password,
       );
+
+      // Mettre à jour la dernière connexion
+      await _firestore.collection('users').doc(result.user!.uid).update({
+        'lastSignIn': FieldValue.serverTimestamp(),
+      });
+
       return result;
     } catch (e) {
       print('Erreur de connexion: $e');
@@ -92,6 +111,33 @@ class AuthService {
         email: email,
         password: password,
       );
+
+      // Vérifier si le compte est actif (sauf pour les admins)
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(result.user!.uid)
+          .get();
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        final role = userData['role'] ?? 'user';
+
+        if (role != 'admin') {
+          final isActive = userData['isActive'] ?? true;
+          if (!isActive) {
+            // Déconnecter immédiatement
+            await _auth.signOut();
+            throw Exception(
+              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.',
+            );
+          }
+        }
+
+        // Mettre à jour la dernière connexion
+        await _firestore.collection('users').doc(result.user!.uid).update({
+          'lastSignIn': FieldValue.serverTimestamp(),
+        });
+      }
+
       return result;
     } catch (e) {
       print('Erreur de connexion: $e');
@@ -161,6 +207,28 @@ class AuthService {
       final UserCredential result = await _auth.signInWithCredential(
         credential,
       );
+
+      // Vérifier si le compte est actif (sauf pour les admins)
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(result.user!.uid)
+          .get();
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        final role = userData['role'] ?? 'user';
+
+        if (role != 'admin') {
+          final isActive = userData['isActive'] ?? true;
+          if (!isActive) {
+            // Déconnecter immédiatement
+            await _auth.signOut();
+            await _googleSignIn.signOut();
+            throw Exception(
+              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.',
+            );
+          }
+        }
+      }
 
       // Créer ou mettre à jour le document utilisateur
       await _createUserDocument(result.user);

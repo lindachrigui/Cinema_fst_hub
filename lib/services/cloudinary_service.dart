@@ -32,10 +32,6 @@ class CloudinaryService {
     required String fileName,
   }) async {
     try {
-      print(
-        '🔄 Upload vers Cloudinary: ${(imageBytes.length / 1024).toStringAsFixed(0)} KB',
-      );
-
       final response = await _cloudinary.uploadFile(
         CloudinaryFile.fromBytesData(
           imageBytes,
@@ -46,12 +42,11 @@ class CloudinaryService {
       );
 
       final url = response.secureUrl;
-      print('✅ Upload Cloudinary réussi: $url');
 
       // Retourne l'URL avec transformation optimisée
       return _getOptimizedUrl(url, width: 600, quality: 'auto');
     } catch (e) {
-      print('❌ Erreur upload Cloudinary: $e');
+      // Erreur silencieuse - retourne null
       return null;
     }
   }
@@ -62,17 +57,8 @@ class CloudinaryService {
     required String userId,
   }) async {
     try {
-      print(
-        '🔄 Upload profil vers Cloudinary: ${(imageBytes.length / 1024).toStringAsFixed(0)} KB',
-      );
-
       final fileName =
           'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}';
-
-      print('📤 Tentative upload avec:');
-      print('  - Cloud Name: $cloudName');
-      print('  - Upload Preset: $uploadPreset');
-      print('  - Fichier: $fileName');
 
       final response = await _cloudinary.uploadFile(
         CloudinaryFile.fromBytesData(
@@ -83,19 +69,11 @@ class CloudinaryService {
       );
 
       final url = response.secureUrl;
-      print('✅ Upload profil Cloudinary réussi: $url');
 
       // Retourne l'URL avec transformation optimisée (sans gravity: face qui nécessite un plan payant)
       return _getOptimizedUrl(url, width: 300, quality: 'auto');
     } catch (e) {
-      print('❌ Erreur upload profil Cloudinary: $e');
-      print('🔍 Type d\'erreur: ${e.runtimeType}');
-      if (e.toString().contains('400')) {
-        print('💡 Vérifiez que:');
-        print('   1. Le upload preset "$uploadPreset" existe');
-        print('   2. Il est configuré en mode "Unsigned"');
-        print('   3. Dans Settings > Upload > Upload presets');
-      }
+      // Erreur silencieuse - retourne null
       return null;
     }
   }

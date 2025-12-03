@@ -19,6 +19,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
   final TextEditingController _hourController = TextEditingController();
   final TextEditingController _minuteController = TextEditingController();
   final TextEditingController _secondController = TextEditingController();
+  final TextEditingController _ratingController = TextEditingController();
 
   final MovieService _movieService = MovieService();
   final CloudinaryService _cloudinaryService = CloudinaryService();
@@ -59,6 +60,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
     _hourController.dispose();
     _minuteController.dispose();
     _secondController.dispose();
+    _ratingController.dispose();
     super.dispose();
   }
 
@@ -295,7 +297,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
             : 7200, // Default 2h if not set
         language: _selectedLanguage,
         imageUrl: imageUrl,
-        rating: 0.0,
+        rating: double.tryParse(_ratingController.text) ?? 0.0,
         viewCount: 0,
         createdAt: DateTime.now(),
         cast: [],
@@ -455,6 +457,37 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
                       }
                     },
                   ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Rating
+              const Text(
+                'Rating',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _ratingController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: '0.0 - 10.0',
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E1E),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  prefixIcon: const Icon(Icons.star, color: Colors.amber),
                 ),
               ),
 

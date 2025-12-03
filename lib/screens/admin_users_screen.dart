@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_service.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_films_screen.dart';
-import 'sign_in_screen.dart';
+import 'admin_profile_screen.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -14,7 +13,6 @@ class AdminUsersScreen extends StatefulWidget {
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   int _selectedIndex = 2;
-  final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   void _onNavItemTapped(int index) {
@@ -28,21 +26,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         context,
         MaterialPageRoute(builder: (context) => const AdminFilmsScreen()),
       );
+    } else if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminProfileScreen()),
+      );
     } else {
       setState(() {
         _selectedIndex = index;
       });
-    }
-  }
-
-  Future<void> _handleLogout() async {
-    await _authService.signOut();
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-        (route) => false,
-      );
     }
   }
 
@@ -145,24 +137,25 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.white),
-                    onPressed: _handleLogout,
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.person, color: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AdminProfileScreen(),
+                            ),
+                          );
+                        },
+                        tooltip: 'Mon Profil',
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-
-            // Page title
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0),
-              child: Text(
-                'users management',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-            ),
-
-            const SizedBox(height: 20),
 
             // Users List Card
             Expanded(
@@ -229,20 +222,33 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           return ListView.separated(
                             itemCount: users.length,
                             separatorBuilder: (context, index) =>
-                                const SizedBox(height: 12),
+                                const Divider(color: Colors.white12, height: 1),
                             itemBuilder: (context, index) {
                               final userData =
                                   users[index].data() as Map<String, dynamic>;
                               final userId = users[index].id;
+                              final displayName = userData['displayName'] ?? '';
                               final firstName = userData['firstName'] ?? '';
                               final lastName = userData['lastName'] ?? '';
                               final email = userData['email'] ?? '';
+                              final photoURL = userData['photoURL'] ?? '';
                               final isActive = userData['isActive'] ?? true;
+
+                              // Utiliser displayName en priorité, sinon firstName + lastName
+                              String userName = displayName.isNotEmpty
+                                  ? displayName
+                                  : '$firstName $lastName'.trim();
+
+                              // Si toujours vide, utiliser l'email
+                              if (userName.isEmpty) {
+                                userName = email.split('@').first;
+                              }
 
                               return _buildUserItem(
                                 userId: userId,
-                                name: '$firstName $lastName',
+                                name: userName,
                                 info: email,
+                                photoURL: photoURL,
                                 isActive: isActive,
                               );
                             },
@@ -269,6 +275,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     required String userId,
     required String name,
     required String info,
+    required String photoURL,
     required bool isActive,
   }) {
     return Container(
@@ -281,61 +288,82 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: Colors.grey[800],
-            child: Icon(Icons.person, color: Colors.grey[600], size: 28),
+            backgroundColor: isActive
+                ? const Color(0xFF6B46C1)
+                : Colors.grey[800],
+            backgroundImage: photoURL.isNotEmpty
+                ? NetworkImage(photoURL)
+                : null,
+            child: photoURL.isEmpty
+                ? Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   name,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   info,
                   style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () => _toggleUserStatus(userId, isActive),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B46C1),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: isActive ? const Color(0xFF6B46C1) : Colors.grey[700],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isActive ? 'Active' : 'Inactive',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-            child: Text(
-              isActive ? 'Activated' : 'Deactivated',
-              style: const TextStyle(fontSize: 11),
-            ),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: () => _toggleUserStatus(userId, isActive),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => _toggleUserStatus(userId, isActive),
+                icon: Icon(
+                  isActive ? Icons.block : Icons.check_circle,
+                  color: isActive ? Colors.red : Colors.green,
+                  size: 22,
+                ),
+                tooltip: isActive ? 'Désactiver' : 'Activer',
               ),
-            ),
-            child: Text(
-              isActive ? 'Deactivated' : 'Activated',
-              style: const TextStyle(fontSize: 11),
-            ),
+            ],
           ),
         ],
       ),
@@ -354,40 +382,23 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem('Dashboard', 0),
-              _buildNavItem('Films', 1),
-              _buildNavItem('Users', 2),
-            ],
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onNavItemTapped,
+        backgroundColor: Colors.transparent,
+        selectedItemColor: const Color(0xFF6B46C1),
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(String label, int index) {
-    final isSelected = _selectedIndex == index;
-    return InkWell(
-      onTap: () => _onNavItemTapped(index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6B46C1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[400],
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
+          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Films'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+        ],
       ),
     );
   }

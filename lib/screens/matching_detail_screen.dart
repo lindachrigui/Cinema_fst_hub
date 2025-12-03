@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math' as math;
 import '../services/matching_service.dart';
 import '../services/user_service.dart';
@@ -26,6 +27,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
   final UserService _userService = UserService();
   List<Map<String, dynamic>> _commonMovies = [];
   UserModel? _userProfile;
+  int _userFavoritesCount = 0;
   bool _isLoading = true;
 
   @override
@@ -42,9 +44,16 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
         final profile = await _userService.getUserById(widget.userId);
         final movies = await _matchingService.getCommonMovies(widget.userId);
 
+        // Compter les favoris de l'utilisateur
+        final favoritesSnapshot = await FirebaseFirestore.instance
+            .collection('favorites')
+            .where('userId', isEqualTo: widget.userId)
+            .get();
+
         setState(() {
           _userProfile = profile;
           _commonMovies = movies;
+          _userFavoritesCount = favoritesSnapshot.docs.length;
           _isLoading = false;
         });
       }
@@ -114,16 +123,25 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                         CircleAvatar(
                           radius: 40,
                           backgroundColor: const Color(0xFF6B46C1),
-                          child: Text(
-                            (_userProfile?.displayName ?? widget.userName)
-                                .substring(0, 1)
-                                .toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          backgroundImage:
+                              _userProfile?.photoURL != null &&
+                                  _userProfile!.photoURL.isNotEmpty
+                              ? NetworkImage(_userProfile!.photoURL)
+                              : null,
+                          child:
+                              _userProfile?.photoURL == null ||
+                                  _userProfile!.photoURL.isEmpty
+                              ? Text(
+                                  (_userProfile?.displayName ?? widget.userName)
+                                      .substring(0, 1)
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : null,
                         ),
 
                         const SizedBox(height: 12),
@@ -153,6 +171,38 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                               textAlign: TextAlign.center,
                             ),
                           ),
+
+                        const SizedBox(height: 30),
+
+                        // User Stats
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 40),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildStatItem(
+                                'Favoris',
+                                _userFavoritesCount.toString(),
+                                Icons.favorite,
+                              ),
+                              Container(
+                                width: 1,
+                                height: 40,
+                                color: Colors.grey[800],
+                              ),
+                              _buildStatItem(
+                                'Membre depuis',
+                                _getMemberSince(),
+                                Icons.calendar_today,
+                              ),
+                            ],
+                          ),
+                        ),
 
                         const SizedBox(height: 40),
 
@@ -234,7 +284,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                           )
                         else
                           SizedBox(
-                            height: 200,
+                            height: 220,
                             child: ListView.builder(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 20,
@@ -258,11 +308,15 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
   }
 
   Widget _buildMovieCard(Map<String, dynamic> movie) {
+    final movieTitle = movie['movieTitle'] ?? movie['title'] ?? 'Sans titre';
+    final imageUrl = movie['movieImage'] ?? movie['imageUrl'] ?? '';
+
     return Container(
       width: 120,
       margin: const EdgeInsets.only(right: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             height: 160,
@@ -270,28 +324,76 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
               color: const Color(0xFF1E1E1E),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.movie, color: Colors.grey, size: 32),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      movie['title'] ?? 'Sans titre',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+            clipBehavior: Clip.antiAlias,
+            child: imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Icon(Icons.movie, color: Colors.grey, size: 48),
+                      );
+                    },
+                  )
+                : const Center(
+                    child: Icon(Icons.movie, color: Colors.grey, size: 48),
                   ),
-                ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 36, // 2 lignes * 18px approximativement
+            child: Text(
+              movieTitle,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  String _getMemberSince() {
+    if (_userProfile?.createdAt == null) return '0m';
+
+    final now = DateTime.now();
+    final createdAt = _userProfile!.createdAt!;
+    final difference = now.difference(createdAt);
+
+    if (difference.inDays < 30) {
+      return '${difference.inDays}j';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return '${months}m';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return '${years}a';
+    }
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: const Color(0xFF6B46C1), size: 24),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+      ],
     );
   }
 }

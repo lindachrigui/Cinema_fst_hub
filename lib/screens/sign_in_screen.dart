@@ -79,18 +79,45 @@ class _SignInScreenState extends State<SignInScreen> {
     } on Exception catch (e) {
       if (mounted) {
         String errorMessage = 'Erreur de connexion';
-        if (e.toString().contains('wrong-password')) {
+        String exceptionString = e.toString();
+
+        if (exceptionString.contains('wrong-password')) {
           errorMessage = 'Mot de passe incorrect';
-        } else if (e.toString().contains('user-not-found')) {
+        } else if (exceptionString.contains('user-not-found')) {
           errorMessage = 'Aucun compte trouvé avec cet email';
-        } else if (e.toString().contains('invalid-email')) {
+        } else if (exceptionString.contains('invalid-email')) {
           errorMessage = 'Email invalide';
+        } else if (exceptionString.contains('désactivé') ||
+            exceptionString.contains('desactivated') ||
+            exceptionString.contains('administrateur')) {
+          errorMessage =
+              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.';
+        } else {
+          // Extraire le message après "Exception: "
+          if (exceptionString.contains('Exception: ')) {
+            errorMessage = exceptionString.split('Exception: ').last;
+          } else {
+            errorMessage = exceptionString;
+          }
         }
         _showErrorDialog(errorMessage);
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog('Erreur: ${e.toString()}');
+        String errorMessage = 'Erreur de connexion';
+        String errorString = e.toString();
+
+        // Extraire le message d'erreur propre
+        if (errorString.contains('Exception: ')) {
+          errorMessage = errorString.split('Exception: ').last;
+        } else if (errorString.contains('désactivé') ||
+            errorString.contains('administrateur')) {
+          errorMessage =
+              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.';
+        } else {
+          errorMessage = errorString;
+        }
+        _showErrorDialog(errorMessage);
       }
     } finally {
       if (mounted) {
@@ -105,12 +132,13 @@ class _SignInScreenState extends State<SignInScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Erreur'),
-        content: Text(message),
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text('Erreur', style: TextStyle(color: Colors.white)),
+        content: Text(message, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text('OK', style: TextStyle(color: Color(0xFF6B46C1))),
           ),
         ],
       ),
@@ -162,10 +190,20 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     } catch (e) {
       if (mounted) {
-        String errorMessage = e.toString();
-        if (errorMessage.contains('Google Sign-In n\'est pas configuré')) {
+        String errorMessage = 'Erreur de connexion';
+        String errorString = e.toString();
+
+        if (errorString.contains('Google Sign-In n\'est pas configuré')) {
           errorMessage =
               'Google Sign-In n\'est pas encore configuré.\n\nPour l\'activer :\n1. Obtenez un Client ID Google\n2. Remplacez YOUR_GOOGLE_CLIENT_ID dans web/index.html';
+        } else if (errorString.contains('Exception: ')) {
+          errorMessage = errorString.split('Exception: ').last;
+        } else if (errorString.contains('désactivé') ||
+            errorString.contains('administrateur')) {
+          errorMessage =
+              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.';
+        } else {
+          errorMessage = errorString;
         }
         _showErrorDialog(errorMessage);
       }

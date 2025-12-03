@@ -6,19 +6,19 @@ import '../services/favorite_service.dart';
 import '../models/user_model.dart';
 import 'sign_in_screen.dart';
 import 'update_profile_screen.dart';
-import 'home_screen.dart';
-import 'favourite_movies_screen.dart';
-import 'matching_screen.dart';
+import 'admin_dashboard_screen.dart';
+import 'admin_films_screen.dart';
+import 'admin_users_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class AdminProfileScreen extends StatefulWidget {
+  const AdminProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<AdminProfileScreen> createState() => _AdminProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  int _selectedIndex = 3;
+class _AdminProfileScreenState extends State<AdminProfileScreen> {
+  int _selectedIndex = 3; // Nouvel onglet pour profil
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
   final FavoriteService _favoriteService = FavoriteService();
@@ -26,6 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _userProfile;
   int _favoritesCount = 0;
   bool _isLoading = true;
+  String _memberSince = '0m';
 
   // Helper pour ajouter cache-busting et forcer le rechargement
   String _getImageUrl(String url) {
@@ -56,6 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _userProfile = profile;
           _favoritesCount = count;
+          _memberSince = _calculateMemberSince(profile?.createdAt);
           _isLoading = false;
         });
       }
@@ -73,22 +75,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (index == 0) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
       );
     } else if (index == 1) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const MatchingScreen()),
+        MaterialPageRoute(builder: (context) => const AdminFilmsScreen()),
       );
     } else if (index == 2) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const FavouriteMoviesScreen()),
+        MaterialPageRoute(builder: (context) => const AdminUsersScreen()),
       );
     } else {
       setState(() {
         _selectedIndex = index;
       });
+    }
+  }
+
+  String _calculateMemberSince(DateTime? createdAt) {
+    if (createdAt == null) return '0m';
+
+    final now = DateTime.now();
+    final difference = now.difference(createdAt);
+
+    if (difference.inDays < 30) {
+      return '${difference.inDays}j';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return '${months}m';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return '${years}a';
     }
   }
 
@@ -99,13 +118,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFF1E1E1E),
         title: const Text('Déconnexion', style: TextStyle(color: Colors.white)),
         content: const Text(
-          'Voulez-vous vous déconnecter ?',
+          'Voulez-vous vraiment vous déconnecter ?',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -118,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
 
-    if (shouldLogout == true && mounted) {
+    if (shouldLogout == true) {
       await _authService.signOut();
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -163,7 +182,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const Text(
-                          'Mon Profil',
+                          'Profil Admin',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -206,43 +225,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 20),
 
                           // Profile Picture
-                          Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF6B46C1),
-                                width: 3,
-                              ),
-                            ),
-                            child: ClipOval(
-                              child:
-                                  _userProfile?.photoURL != null &&
-                                      _userProfile!.photoURL.isNotEmpty
-                                  ? Image.network(
-                                      _getImageUrl(_userProfile!.photoURL),
-                                      fit: BoxFit.cover,
-                                      loadingBuilder:
-                                          (context, child, loadingProgress) {
-                                            if (loadingProgress == null) {
-                                              return child;
-                                            }
-                                            return const Center(
-                                              child: CircularProgressIndicator(
-                                                color: Color(0xFF6B46C1),
-                                              ),
-                                            );
-                                          },
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Container(
-                                              color: const Color(0xFF6B46C1),
-                                              child: Center(
-                                                child: Text(
+                          Stack(
+                            children: [
+                              Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFF6B46C1),
+                                    width: 3,
+                                  ),
+                                ),
+                                child: ClipOval(
+                                  child:
+                                      _userProfile?.photoURL != null &&
+                                          _userProfile!.photoURL.isNotEmpty
+                                      ? Image.network(
+                                          _getImageUrl(_userProfile!.photoURL),
+                                          fit: BoxFit.cover,
+                                          loadingBuilder:
+                                              (
+                                                context,
+                                                child,
+                                                loadingProgress,
+                                              ) {
+                                                if (loadingProgress == null) {
+                                                  return child;
+                                                }
+                                                return const Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        color: Color(
+                                                          0xFF6B46C1,
+                                                        ),
+                                                      ),
+                                                );
+                                              },
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Text(
                                                   (_userProfile?.displayName ??
                                                           user?.email ??
-                                                          'U')
+                                                          'A')
                                                       .substring(0, 1)
                                                       .toUpperCase(),
                                                   style: const TextStyle(
@@ -250,29 +275,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                     fontSize: 36,
                                                     fontWeight: FontWeight.bold,
                                                   ),
-                                                ),
+                                                );
+                                              },
+                                        )
+                                      : Container(
+                                          color: const Color(0xFF6B46C1),
+                                          child: Center(
+                                            child: Text(
+                                              (_userProfile?.displayName ??
+                                                      user?.email ??
+                                                      'A')
+                                                  .substring(0, 1)
+                                                  .toUpperCase(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 36,
+                                                fontWeight: FontWeight.bold,
                                               ),
-                                            );
-                                          },
-                                    )
-                                  : Container(
-                                      color: const Color(0xFF6B46C1),
-                                      child: Center(
-                                        child: Text(
-                                          (_userProfile?.displayName ??
-                                                  user?.email ??
-                                                  'U')
-                                              .substring(0, 1)
-                                              .toUpperCase(),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 36,
-                                            fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                            ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF6B46C1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.admin_panel_settings,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
 
                           const SizedBox(height: 16),
@@ -281,7 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Text(
                             _userProfile?.displayName ??
                                 user?.displayName ??
-                                'Utilisateur',
+                                'Admin',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -361,7 +402,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      _getMemberSince(),
+                                      _memberSince,
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 24,
@@ -454,108 +495,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
 
-                  // Bottom Navigation Bar (User)
+                  // Bottom Navigation (Admin)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E1E),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
+                    ),
+                    child: BottomNavigationBar(
+                      currentIndex: _selectedIndex,
+                      onTap: _onNavItemTapped,
+                      backgroundColor: Colors.transparent,
+                      selectedItemColor: const Color(0xFF6B46C1),
+                      unselectedItemColor: Colors.grey,
+                      type: BottomNavigationBarType.fixed,
+                      elevation: 0,
+                      items: const [
+                        BottomNavigationBarItem(
+                          icon: Icon(Icons.dashboard),
+                          label: 'Dashboard',
+                        ),
+                        BottomNavigationBarItem(
+                          icon: Icon(Icons.movie),
+                          label: 'Films',
+                        ),
+                        BottomNavigationBarItem(
+                          icon: Icon(Icons.people),
+                          label: 'Users',
+                        ),
+                        BottomNavigationBarItem(
+                          icon: Icon(Icons.person),
+                          label: 'Profil',
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  icon: Icons.movie_outlined,
-                  label: 'Movies',
-                  isSelected: _selectedIndex == 0,
-                  onTap: () => _onNavItemTapped(0),
-                ),
-                _buildNavItem(
-                  icon: Icons.people_outline,
-                  label: 'Match',
-                  isSelected: _selectedIndex == 1,
-                  onTap: () => _onNavItemTapped(1),
-                ),
-                _buildNavItem(
-                  icon: Icons.favorite_outline,
-                  label: 'Favourite',
-                  isSelected: _selectedIndex == 2,
-                  onTap: () => _onNavItemTapped(2),
-                ),
-                _buildNavItem(
-                  icon: Icons.more_horiz,
-                  label: '',
-                  isSelected: _selectedIndex == 3,
-                  onTap: () => _onNavItemTapped(3),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getMemberSince() {
-    if (_userProfile?.createdAt == null) return '0m';
-
-    final now = DateTime.now();
-    final createdAt = _userProfile!.createdAt!;
-    final difference = now.difference(createdAt);
-
-    if (difference.inDays < 30) {
-      return '${difference.inDays}j';
-    } else if (difference.inDays < 365) {
-      final months = (difference.inDays / 30).floor();
-      return '${months}m';
-    } else {
-      final years = (difference.inDays / 365).floor();
-      return '${years}a';
-    }
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6B46C1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            if (label.isNotEmpty && isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }

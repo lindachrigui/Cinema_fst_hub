@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_service.dart';
 import '../services/moviedb_api_service.dart';
 import '../models/movie_model.dart';
 import 'admin_users_screen.dart';
 import 'admin_films_screen.dart';
-import 'sign_in_screen.dart';
+import 'admin_profile_screen.dart';
 import 'dart:math' as math;
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -17,7 +16,6 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
-  final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final MovieDbApiService _apiService = MovieDbApiService();
 
@@ -26,8 +24,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _activeUsers = 0;
   String _mostFavoriteFilm = 'Chargement...';
   int _mostFavoriteCount = 0;
-  int _totalViews = 0;
-  int _totalReviews = 0;
   bool _isLoading = true;
 
   @override
@@ -42,19 +38,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _isLoading = true;
       });
 
-      // Compter les utilisateurs
+      // Compter les utilisateurs (hors admin)
       final usersSnapshot = await _firestore.collection('users').get();
-      _totalUsers = usersSnapshot.docs.length;
-
-      // Compter les utilisateurs actifs (connectés dans les 30 derniers jours)
-      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      _activeUsers = usersSnapshot.docs.where((doc) {
+      final nonAdminUsers = usersSnapshot.docs.where((doc) {
         final data = doc.data();
-        if (data.containsKey('lastSignIn')) {
-          final lastSignIn = (data['lastSignIn'] as Timestamp).toDate();
-          return lastSignIn.isAfter(thirtyDaysAgo);
-        }
-        return false;
+        final role = data['role'] ?? 'user';
+        return role != 'admin';
+      }).toList();
+      _totalUsers = nonAdminUsers.length;
+
+      // Compter les utilisateurs actifs (isActive = true, hors admin)
+      _activeUsers = nonAdminUsers.where((doc) {
+        final data = doc.data();
+        final isActive =
+            data['isActive'] ?? true; // Par défaut active si non spécifié
+        return isActive == true;
       }).length;
 
       // Compter les films Firestore + API
@@ -63,17 +61,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           .get();
       final apiMovies = await _apiService.getPopularMovies();
       _totalFilms = firestoreMoviesSnapshot.docs.length + apiMovies.length;
-
-      // Calculer le total des vues (films Firestore uniquement)
-      _totalViews = 0;
-      for (var doc in firestoreMoviesSnapshot.docs) {
-        final movie = Movie.fromFirestore(doc);
-        _totalViews += movie.viewCount;
-      }
-
-      // Calculer le nombre total de reviews
-      final reviewsSnapshot = await _firestore.collection('reviews').get();
-      _totalReviews = reviewsSnapshot.docs.length;
 
       // Trouver le film le plus favori
       final favoritesSnapshot = await _firestore.collection('favorites').get();
@@ -124,14 +111,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _onNavItemTapped(int index) {
     if (index == 1) {
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const AdminFilmsScreen()),
       );
     } else if (index == 2) {
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const AdminUsersScreen()),
+      );
+    } else if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminProfileScreen()),
       );
     } else {
       setState(() {
@@ -140,22 +132,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Future<void> _handleLogout() async {
-    await _authService.signOut();
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-        (route) => false,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final activePercentage = _totalUsers > 0
         ? ((_activeUsers / _totalUsers) * 100).toInt()
         : 0;
+
+    // Responsive sizing
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
+    final cardPadding = isSmallScreen ? 12.0 : 16.0;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -169,7 +155,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   // Header
                   Padding(
-                    padding: const EdgeInsets.all(20.0),
+                    padding: EdgeInsets.all(cardPadding),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -185,19 +171,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           children: [
                             IconButton(
                               icon: const Icon(
-                                Icons.refresh,
+                                Icons.person,
                                 color: Colors.white,
                               ),
-                              onPressed: _loadDashboardData,
-                              tooltip: 'Actualiser',
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.logout,
-                                color: Colors.white,
-                              ),
-                              onPressed: _handleLogout,
-                              tooltip: 'Déconnexion',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AdminProfileScreen(),
+                                  ),
+                                );
+                              },
+                              tooltip: 'Mon Profil',
                             ),
                           ],
                         ),
@@ -208,7 +194,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   // Stats Grid
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      padding: EdgeInsets.symmetric(horizontal: cardPadding),
                       child: Column(
                         children: [
                           // Row 1
@@ -253,27 +239,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                           const SizedBox(height: 16),
 
-                          // Row 3
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  'TOTAL VIEWS',
-                                  _totalViews.toString(),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildStatCard(
-                                  'TOTAL REVIEWS',
-                                  _totalReviews.toString(),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
                           // Most Favorite Film Card
                           _buildFavoriteFilmCard(
                             'MOST FAVORITE FILM',
@@ -302,29 +267,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildStatCard(String title, String value) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -334,7 +306,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildPercentageCard(String title, int percentage) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(16),
@@ -346,24 +318,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Center(
             child: SizedBox(
-              width: 100,
-              height: 100,
+              width: 80,
+              height: 80,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   SizedBox(
-                    width: 100,
-                    height: 100,
+                    width: 80,
+                    height: 80,
                     child: CircularProgressIndicator(
                       value: percentage / 100,
-                      strokeWidth: 12,
+                      strokeWidth: 10,
                       backgroundColor: Colors.grey[800],
                       valueColor: const AlwaysStoppedAnimation<Color>(
                         Color(0xFF6B46C1),
@@ -374,7 +348,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     '$percentage%',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -390,7 +364,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildFavoriteFilmCard(String title, String filmName, int count) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF6B46C1), Color(0xFF8B5CF6)],
@@ -404,15 +378,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.favorite, color: Colors.red, size: 20),
+              const Icon(Icons.favorite, color: Colors.red, size: 18),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -457,16 +435,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         'label': 'Active',
         'value': _activeUsers,
         'color': const Color(0xFFEC4899),
-      },
-      {
-        'label': 'Views',
-        'value': _totalViews,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Reviews',
-        'value': _totalReviews,
-        'color': const Color(0xFFF59E0B),
       },
     ];
 
@@ -583,40 +551,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem('Dashboard', 0),
-              _buildNavItem('Films', 1),
-              _buildNavItem('Users', 2),
-            ],
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onNavItemTapped,
+        backgroundColor: Colors.transparent,
+        selectedItemColor: const Color(0xFF6B46C1),
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(String label, int index) {
-    final isSelected = _selectedIndex == index;
-    return InkWell(
-      onTap: () => _onNavItemTapped(index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6B46C1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[400],
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
+          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Films'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+        ],
       ),
     );
   }

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_service.dart';
 import '../services/moviedb_api_service.dart';
 import '../models/movie_model.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_add_film_screen.dart';
 import 'admin_update_movie_screen.dart';
-import 'sign_in_screen.dart';
+import 'admin_profile_screen.dart';
 
 class AdminFilmsScreen extends StatefulWidget {
   const AdminFilmsScreen({super.key});
@@ -37,7 +36,6 @@ class MovieItem {
 
 class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
   int _selectedIndex = 1;
-  final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final MovieDbApiService _apiService = MovieDbApiService();
 
@@ -111,21 +109,15 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
         context,
         MaterialPageRoute(builder: (context) => const AdminUsersScreen()),
       );
+    } else if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminProfileScreen()),
+      );
     } else {
       setState(() {
         _selectedIndex = index;
       });
-    }
-  }
-
-  Future<void> _handleLogout() async {
-    await _authService.signOut();
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-        (route) => false,
-      );
     }
   }
 
@@ -394,24 +386,25 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.person, color: Colors.white),
-                    onPressed: _handleLogout,
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.person, color: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AdminProfileScreen(),
+                            ),
+                          );
+                        },
+                        tooltip: 'Mon Profil',
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-
-            // Page title
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0),
-              child: Text(
-                'film management',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-            ),
-
-            const SizedBox(height: 20),
 
             // Action buttons
             Padding(
@@ -794,40 +787,23 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem('Dashboard', 0),
-              _buildNavItem('Films', 1),
-              _buildNavItem('Users', 2),
-            ],
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onNavItemTapped,
+        backgroundColor: Colors.transparent,
+        selectedItemColor: const Color(0xFF6B46C1),
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(String label, int index) {
-    final isSelected = _selectedIndex == index;
-    return InkWell(
-      onTap: () => _onNavItemTapped(index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6B46C1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[400],
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
+          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Films'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+        ],
       ),
     );
   }

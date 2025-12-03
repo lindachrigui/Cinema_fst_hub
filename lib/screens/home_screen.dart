@@ -577,7 +577,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         // Popular Movies Section
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
                               'Popular Movies',
@@ -585,18 +584,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                // TODO: Navigate to all popular movies
-                              },
-                              child: const Text(
-                                'See All >',
-                                style: TextStyle(
-                                  color: Color(0xFF6B46C1),
-                                  fontSize: 14,
-                                ),
                               ),
                             ),
                           ],
@@ -986,7 +973,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         // New Releases Section
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
                               'New Releases',
@@ -994,18 +980,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                // TODO: Navigate to all new releases
-                              },
-                              child: const Text(
-                                'See All >',
-                                style: TextStyle(
-                                  color: Color(0xFF6B46C1),
-                                  fontSize: 14,
-                                ),
                               ),
                             ),
                           ],

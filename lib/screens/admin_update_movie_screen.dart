@@ -21,6 +21,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
   late TextEditingController _hourController;
   late TextEditingController _minuteController;
   late TextEditingController _secondController;
+  late TextEditingController _ratingController;
 
   final MovieService _movieService = MovieService();
   final CloudinaryService _cloudinaryService = CloudinaryService();
@@ -80,6 +81,10 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
       text: seconds > 0 ? seconds.toString() : '',
     );
 
+    _ratingController = TextEditingController(
+      text: widget.movie.rating > 0 ? widget.movie.rating.toString() : '',
+    );
+
     _selectedGenre = widget.movie.genre;
     _selectedLanguage = widget.movie.language.isNotEmpty
         ? widget.movie.language
@@ -93,6 +98,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
     _hourController.dispose();
     _minuteController.dispose();
     _secondController.dispose();
+    _ratingController.dispose();
     super.dispose();
   }
 
@@ -269,6 +275,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
         duration: totalSeconds > 0 ? totalSeconds : widget.movie.duration,
         language: _selectedLanguage,
         imageUrl: imageUrl,
+        rating: double.tryParse(_ratingController.text) ?? widget.movie.rating,
         availableLanguages: [_selectedLanguage],
       );
 
@@ -406,6 +413,37 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
                       }
                     },
                   ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Rating
+              const Text(
+                'Rating',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _ratingController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: '0.0 - 10.0',
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E1E),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  prefixIcon: const Icon(Icons.star, color: Colors.amber),
                 ),
               ),
 

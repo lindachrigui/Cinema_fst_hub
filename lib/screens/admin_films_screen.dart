@@ -79,7 +79,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
         final converted = _apiService.convertToMovieModel(apiMovie);
         return MovieItem(
           id: 'api_${converted['id']}',
-          title: converted['title'] ?? 'Sans titre',
+          title: converted['title'] ?? 'Untitled',
           imageUrl: converted['imageUrl'] ?? '',
           rating: (converted['rating'] ?? 0.0).toDouble(),
           source: 'api',
@@ -156,7 +156,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Impossible de supprimer les films de l\'API. Seuls les films ajoutés peuvent être supprimés.',
+                  'Cannot delete API movies. Only added movies can be deleted.',
                 ),
               ),
             ],
@@ -173,21 +173,21 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
         title: const Text(
-          'Confirmer la suppression',
+          'Confirm Deletion',
           style: TextStyle(color: Colors.white),
         ),
         content: Text(
-          'Voulez-vous supprimer définitivement ${_selectedFilms.length} film(s) ?\n\nCette action est irréversible.',
+          'Do you want to permanently delete ${_selectedFilms.length} movie(s)?\n\nThis action is irreversible.',
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -209,7 +209,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
                   ),
                 ),
                 SizedBox(width: 12),
-                Text('Suppression en cours...'),
+                Text('Deletion in progress...'),
               ],
             ),
             backgroundColor: Color(0xFF6B46C1),
@@ -230,7 +230,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
                   const Icon(Icons.check_circle, color: Colors.green),
                   const SizedBox(width: 8),
                   Text(
-                    '${_selectedFilms.length} film(s) supprimé(s) avec succès',
+                    '${_selectedFilms.length} movie(s) deleted successfully',
                   ),
                 ],
               ),
@@ -276,7 +276,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
     if (filmId.startsWith('api_')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Impossible de modifier un film de l\'API'),
+          content: Text('Cannot edit API movies'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -299,7 +299,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Film introuvable'),
+                content: Text('Movie not found in database'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -340,7 +340,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Données du film invalides'),
+            content: Text('Data error: Movie data is missing'),
             backgroundColor: Colors.red,
           ),
         );
@@ -398,7 +398,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
                             ),
                           );
                         },
-                        tooltip: 'Mon Profil',
+                        tooltip: 'My Profile',
                       ),
                     ],
                   ),
@@ -406,12 +406,13 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
               ),
             ),
 
-            // Action buttons
+            // Title and action buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title
                   const Text(
                     'List of movies',
                     style: TextStyle(
@@ -420,7 +421,10 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  // Action buttons
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       if (_isSelectionMode) ...[
                         if (_selectedFilms.isNotEmpty) ...[
@@ -532,7 +536,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
                   if (combinedMovies.isEmpty) {
                     return const Center(
                       child: Text(
-                        'Aucun film',
+                        'No movies available',
                         style: TextStyle(color: Colors.grey),
                       ),
                     );
@@ -800,7 +804,7 @@ class _AdminFilmsScreenState extends State<AdminFilmsScreen> {
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Films'),
+          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Movies'),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
         ],

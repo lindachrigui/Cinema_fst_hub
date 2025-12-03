@@ -93,7 +93,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                   const Expanded(
                     child: Center(
                       child: Text(
-                        'Détails de correspondance',
+                        'Match Details',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -186,7 +186,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               _buildStatItem(
-                                'Favoris',
+                                'Favourites',
                                 _userFavoritesCount.toString(),
                                 Icons.favorite,
                               ),
@@ -196,7 +196,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                                 color: Colors.grey[800],
                               ),
                               _buildStatItem(
-                                'Membre depuis',
+                                'Member since',
                                 _getMemberSince(),
                                 Icons.calendar_today,
                               ),
@@ -250,7 +250,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Films en commun (${_commonMovies.length})',
+                                'Common Movies (${_commonMovies.length})',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -276,7 +276,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Aucun film en commun',
+                                  'No common movies',
                                   style: TextStyle(color: Colors.grey[600]),
                                 ),
                               ],

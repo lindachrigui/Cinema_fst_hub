@@ -116,22 +116,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Déconnexion', style: TextStyle(color: Colors.white)),
+        title: const Text('Log out', style: TextStyle(color: Colors.white)),
         content: const Text(
-          'Voulez-vous vraiment vous déconnecter ?',
+          'Are you sure you want to log out?',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Déconnexion',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Log out', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -182,7 +179,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                           ),
                         ),
                         const Text(
-                          'Profil Admin',
+                          'Admin Profile',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -380,7 +377,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     const Text(
-                                      'Favoris',
+                                      'Favourites',
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 14,
@@ -411,7 +408,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     const Text(
-                                      'Membre depuis',
+                                      'Member Since',
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 14,
@@ -440,7 +437,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  user?.email ?? 'Non renseigné',
+                                  user?.email ?? 'Not provided',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -477,7 +474,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                     Icon(Icons.logout, size: 20),
                                     SizedBox(width: 8),
                                     Text(
-                                      'Déconnexion',
+                                      'Log Out',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -522,7 +519,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                         ),
                         BottomNavigationBarItem(
                           icon: Icon(Icons.movie),
-                          label: 'Films',
+                          label: 'Movies',
                         ),
                         BottomNavigationBarItem(
                           icon: Icon(Icons.people),

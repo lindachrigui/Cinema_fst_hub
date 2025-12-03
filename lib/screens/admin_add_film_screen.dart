@@ -88,7 +88,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
                     ),
                   ),
                   SizedBox(width: 12),
-                  Text('Compression de l\'image...'),
+                  Text('Compressing image...'),
                 ],
               ),
               backgroundColor: Color(0xFF6B46C1),
@@ -116,7 +116,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
                   const Icon(Icons.check_circle, color: Colors.green),
                   const SizedBox(width: 8),
                   Text(
-                    'Image prête (${(compressedBytes.length / 1024).toStringAsFixed(0)} KB)',
+                    'Image ready (${(compressedBytes.length / 1024).toStringAsFixed(0)} KB)',
                   ),
                 ],
               ),
@@ -130,7 +130,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur de sélection d\'image: $e'),
+            content: Text('Image selection error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -158,7 +158,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
       final compressed = img.encodeJpg(resized, quality: 70);
       return Uint8List.fromList(compressed);
     } catch (e) {
-      print('Erreur compression: $e');
+      print('Error compressing image: $e');
       return bytes;
     }
   }
@@ -168,7 +168,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez entrer un titre'),
+          content: Text('Please enter a title'),
           backgroundColor: Colors.red,
         ),
       );
@@ -231,7 +231,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
                     children: [
                       Icon(Icons.cloud_done, color: Colors.green),
                       SizedBox(width: 8),
-                      Text('Image uploadée avec succès!'),
+                      Text('Image uploaded successfully!'),
                     ],
                   ),
                   backgroundColor: Colors.green,
@@ -241,7 +241,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
             }
           } else {
             // Continue without image if upload fails
-            print('Upload échoué, film ajouté sans image');
+            print('Upload failed, movie added without image');
             if (mounted) {
               ScaffoldMessenger.of(context).clearSnackBars();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -250,7 +250,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
                     children: [
                       Icon(Icons.warning, color: Colors.orange),
                       SizedBox(width: 8),
-                      Text('Image non uploadée - Film ajouté sans image'),
+                      Text('Image not uploaded - Movie added without image'),
                     ],
                   ),
                   backgroundColor: Colors.orange,
@@ -310,7 +310,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
       final movieId = await _movieService.addMovie(movie);
 
       if (movieId == null) {
-        throw Exception('Échec de l\'ajout du film');
+        throw Exception('Failed to add movie');
       }
 
       if (mounted) {
@@ -321,7 +321,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
               children: [
                 Icon(Icons.check_circle, color: Colors.green),
                 SizedBox(width: 8),
-                Text('Film ajouté avec succès!'),
+                Text('Movie added successfully!'),
               ],
             ),
             backgroundColor: Color(0xFF6B46C1),
@@ -651,7 +651,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
                           ),
                         )
                       : const Text(
-                          'Add Film',
+                          'Add Movie',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -683,7 +683,7 @@ class _AdminAddFilmScreenState extends State<AdminAddFilmScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem('Dashboard', false),
-                _buildNavItem('Films', true),
+                _buildNavItem('Movies', true),
                 _buildNavItem('Users', false),
               ],
             ),

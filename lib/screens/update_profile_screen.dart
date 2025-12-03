@@ -59,7 +59,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Erreur de chargement: $e')));
+        ).showSnackBar(SnackBar(content: Text('Loading error: $e')));
       }
     }
   }
@@ -86,7 +86,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Image sélectionnée ($sizeInKB KB)'),
+              content: Text('Image selected ($sizeInKB KB)'),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -96,7 +96,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Erreur de sélection: $e')));
+        ).showSnackBar(SnackBar(content: Text('Selection error: $e')));
       }
     }
   }
@@ -105,7 +105,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     if (_displayNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Le nom est requis')));
+      ).showSnackBar(const SnackBar(content: Text('Name is required')));
       return;
     }
 
@@ -153,7 +153,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                   ), // 1 minute (Cloudinary est plus rapide)
                   onTimeout: () {
                     throw Exception(
-                      'Upload timeout - Vérifiez votre connexion internet',
+                      'Upload timeout - Check your internet connection',
                     );
                   },
                 );
@@ -202,7 +202,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                 children: [
                   Icon(Icons.check_circle, color: Colors.white),
                   SizedBox(width: 12),
-                  Text('Profil mis à jour avec succès!'),
+                  Text('Profile updated successfully!'),
                 ],
               ),
               backgroundColor: Color(0xFF6B46C1),
@@ -221,7 +221,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Erreur: $e')),
+                Expanded(child: Text('Error: $e')),
               ],
             ),
             backgroundColor: Colors.red,
@@ -278,7 +278,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                             ),
                           ),
                           const Text(
-                            'Modifier le profil',
+                            'Edit Profile',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -408,8 +408,8 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                       Center(
                         child: Text(
                           _webImageBytes != null
-                              ? '✓ Nouvelle photo sélectionnée'
-                              : 'Toucher pour changer la photo',
+                              ? 'New photo selected'
+                              : 'Tap to change photo',
                           style: TextStyle(
                             color: _webImageBytes != null
                                 ? Colors.green
@@ -426,12 +426,12 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
                       // Display Name
                       const Text(
-                        'Nom d\'affichage',
+                        'Display Name',
                         style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       CustomTextField(
-                        hintText: 'Votre nom',
+                        hintText: 'Your name',
                         prefixIcon: Icons.person_outline,
                         controller: _displayNameController,
                         keyboardType: TextInputType.name,
@@ -441,7 +441,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
                       // Bio
                       const Text(
-                        'Biographie',
+                        'Biography',
                         style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
@@ -451,7 +451,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                         maxLength: 200,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          hintText: 'Parlez-nous de vous...',
+                          hintText: 'Tell us about yourself...',
                           hintStyle: TextStyle(color: Colors.grey[600]),
                           filled: true,
                           fillColor: const Color(0xFF1E1E1E),
@@ -523,7 +523,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                                     ),
                                     SizedBox(width: 12),
                                     Text(
-                                      'Enregistrement en cours...',
+                                      'saving...',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -538,8 +538,8 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                                     const SizedBox(width: 8),
                                     Text(
                                       _webImageBytes != null
-                                          ? 'Enregistrer avec nouvelle photo'
-                                          : 'Enregistrer les modifications',
+                                          ? 'Save with new photo'
+                                          : 'Save changes',
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,

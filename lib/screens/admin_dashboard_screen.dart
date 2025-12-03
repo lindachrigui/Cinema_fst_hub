@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/moviedb_api_service.dart';
-import '../models/movie_model.dart';
 import 'admin_users_screen.dart';
 import 'admin_films_screen.dart';
 import 'admin_profile_screen.dart';
@@ -90,7 +89,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       });
 
       _mostFavoriteFilm = mostFavoriteId != null
-          ? movieTitles[mostFavoriteId] ?? 'Aucun film'
+          ? movieTitles[mostFavoriteId] ?? 'No movies'
           : 'Aucun film';
       _mostFavoriteCount = maxFavorites;
 
@@ -408,7 +407,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '$count favoris',
+            '$count favourites',
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
               fontSize: 14,
@@ -564,7 +563,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Films'),
+          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Movies'),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
         ],

@@ -45,12 +45,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
         title: Text(
-          isActive ? 'Désactiver le compte' : 'Activer le compte',
+          isActive ? 'Deactivate account' : 'Activate account',
           style: const TextStyle(color: Colors.white),
         ),
         content: Text(
           isActive
-              ? 'Êtes-vous sûr de vouloir désactiver ce compte ?\n\nL\'utilisateur ne pourra plus se connecter.'
+              ? 'Are you sure you want to deactivate this account?\n\nThe user will no longer be able to log in.'
               : 'Êtes-vous sûr de vouloir activer ce compte ?\n\nL\'utilisateur pourra à nouveau se connecter.',
           style: const TextStyle(color: Colors.white70),
         ),
@@ -62,7 +62,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(
-              isActive ? 'Désactiver' : 'Activer',
+              isActive ? 'Deactivate' : 'Activate',
               style: TextStyle(
                 color: isActive ? Colors.red : const Color(0xFF6B46C1),
               ),
@@ -193,7 +193,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           if (snapshot.hasError) {
                             return const Center(
                               child: Text(
-                                'Erreur de chargement',
+                                'Error loading users',
                                 style: TextStyle(color: Colors.red),
                               ),
                             );
@@ -213,7 +213,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           if (users.isEmpty) {
                             return const Center(
                               child: Text(
-                                'Aucun utilisateur',
+                                'No users available',
                                 style: TextStyle(color: Colors.grey),
                               ),
                             );
@@ -361,7 +361,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   color: isActive ? Colors.red : Colors.green,
                   size: 22,
                 ),
-                tooltip: isActive ? 'Désactiver' : 'Activer',
+                tooltip: isActive ? 'Deactivate' : 'Activate',
               ),
             ],
           ),
@@ -395,7 +395,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Films'),
+          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Movies'),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
         ],

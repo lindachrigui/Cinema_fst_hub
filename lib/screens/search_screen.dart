@@ -134,7 +134,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         controller: _searchController,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un film...',
+                          hintText: 'Search for a movie...',
                           hintStyle: TextStyle(color: Colors.grey[600]),
                           prefixIcon: const Icon(
                             Icons.search,
@@ -199,7 +199,7 @@ class _SearchScreenState extends State<SearchScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Recherches récentes',
+                'Recent Searches',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -210,7 +210,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 TextButton(
                   onPressed: _clearRecentSearches,
                   child: const Text(
-                    'Effacer tout',
+                    'Clear All',
                     style: TextStyle(color: Color(0xFF6B46C1)),
                   ),
                 ),
@@ -226,7 +226,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     Icon(Icons.search_off, color: Colors.grey, size: 64),
                     SizedBox(height: 16),
                     Text(
-                      'Aucune recherche récente',
+                      'No recent searches',
                       style: TextStyle(color: Colors.grey),
                     ),
                   ],
@@ -270,7 +270,7 @@ class _SearchScreenState extends State<SearchScreen> {
             const Icon(Icons.search_off, color: Colors.grey, size: 64),
             const SizedBox(height: 16),
             Text(
-              'Aucun résultat pour "${_searchController.text}"',
+              'no results for "${_searchController.text}"',
               style: const TextStyle(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
@@ -286,7 +286,7 @@ class _SearchScreenState extends State<SearchScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$totalResults résultat${totalResults > 1 ? 's' : ''}',
+              '$totalResults result${totalResults > 1 ? 's' : ''}',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -297,7 +297,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
             if (_firebaseResults.isNotEmpty) ...[
               const Text(
-                'Dans notre catalogue',
+                'In our catalog',
                 style: TextStyle(
                   color: Color(0xFF6B46C1),
                   fontSize: 16,
@@ -311,7 +311,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
             if (_searchResults.isNotEmpty) ...[
               const Text(
-                'Autres films disponibles',
+                'Other available movies',
                 style: TextStyle(
                   color: Color(0xFF6B46C1),
                   fontSize: 16,

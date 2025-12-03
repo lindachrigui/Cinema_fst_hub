@@ -124,10 +124,10 @@ class AuthService {
         if (role != 'admin') {
           final isActive = userData['isActive'] ?? true;
           if (!isActive) {
-            // Déconnecter immédiatement
+            // Disconnect immediately
             await _auth.signOut();
             throw Exception(
-              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.',
+              'Your account has been deactivated. Please contact the administrator.',
             );
           }
         }
@@ -220,11 +220,11 @@ class AuthService {
         if (role != 'admin') {
           final isActive = userData['isActive'] ?? true;
           if (!isActive) {
-            // Déconnecter immédiatement
+            // Disconnect immediately
             await _auth.signOut();
             await _googleSignIn.signOut();
             throw Exception(
-              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.',
+              'Your account has been deactivated. Please contact the administrator.',
             );
           }
         }
@@ -245,7 +245,7 @@ class AuthService {
     try {
       if (!isGoogleSignInAvailable) {
         throw Exception(
-          'Google Sign-In n\'est pas configuré. Veuillez configurer GOOGLE_CLIENT_ID.',
+          'Google Sign-In is not configured. Please configure GOOGLE_CLIENT_ID.',
         );
       }
 
@@ -383,21 +383,21 @@ class AuthService {
         case 'weak-password':
           return 'Le mot de passe est trop faible.';
         case 'email-already-in-use':
-          return 'Un compte existe déjà avec cette adresse email.';
+          return 'An account already exists with this email address.';
         case 'invalid-email':
-          return 'L\'adresse email n\'est pas valide.';
+          return 'The email address is not valid.';
         case 'user-not-found':
-          return 'Aucun utilisateur trouvé avec cette adresse email.';
+          return 'No user found with this email address.';
         case 'wrong-password':
-          return 'Mot de passe incorrect.';
+          return 'Incorrect password.';
         case 'user-disabled':
-          return 'Ce compte a été désactivé.';
+          return 'This account has been deactivated.';
         case 'too-many-requests':
-          return 'Trop de tentatives. Veuillez réessayer plus tard.';
+          return 'Too many attempts. Please try again later.';
         case 'network-request-failed':
-          return 'Erreur de connexion. Vérifiez votre connexion internet.';
+          return 'Connection error. Check your internet connection.';
         default:
-          return 'Une erreur s\'est produite: ${error.message}';
+          return 'An error occurred: ${error.message}';
       }
     }
     return 'Une erreur inattendue s\'est produite.';

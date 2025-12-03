@@ -98,7 +98,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.0),
               child: Text(
-                'UTILISATEURS AVEC PLUS DE 75% DE CORRESPONDANCE',
+                'USERS WITH MORE THAN 75% MATCH',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -130,12 +130,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Aucune correspondance trouvée',
+                            'No matches found',
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Ajoutez plus de films à vos favoris',
+                            'Add more movies to your favourites',
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontSize: 12,
@@ -198,7 +198,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 ),
                 _buildNavItem(
                   icon: Icons.more_horiz,
-                  label: '',
+                  label: 'Profile',
                   isSelected: _selectedIndex == 3,
                   onTap: () => _onNavItemTapped(3),
                 ),
@@ -272,7 +272,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user['displayName'] ?? user['email'] ?? 'Utilisateur',
+                    user['displayName'] ?? user['email'] ?? 'User',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -289,7 +289,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '$commonMoviesCount films en commun',
+                        '$commonMoviesCount common movies',
                         style: const TextStyle(
                           color: Colors.grey,
                           fontSize: 13,

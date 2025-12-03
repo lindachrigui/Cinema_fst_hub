@@ -154,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (popularData.isEmpty) {
         setState(() {
-          _error = 'Aucun film disponible pour le moment';
+          _error = 'No movies available at the moment';
           _isLoading = false;
         });
         return;
@@ -198,8 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
       print('Erreur lors du chargement des films: $e');
       if (mounted) {
         setState(() {
-          _error =
-              'Impossible de charger les films.\nVérifiez votre connexion internet.';
+          _error = 'Unable to load movies.\nCheck your internet connection.';
           _isLoading = false;
         });
       }
@@ -221,6 +220,11 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const FavouriteMoviesScreen()),
+      );
+    } else if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
       );
     }
     // Index 0 is already Home Screen, no navigation needed
@@ -597,7 +601,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: _popularMovies.isEmpty
                               ? const Center(
                                   child: Text(
-                                    'Aucun film disponible',
+                                    'No movies available',
                                     style: TextStyle(color: Colors.white70),
                                   ),
                                 )
@@ -740,7 +744,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
-                                'Films ajoutés',
+                                'Added Movies',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -993,7 +997,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: _newReleases.isEmpty
                               ? const Center(
                                   child: Text(
-                                    'Aucune nouveauté disponible',
+                                    'No new releases available',
                                     style: TextStyle(color: Colors.white70),
                                   ),
                                 )
@@ -1201,7 +1205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 _buildNavItem(
                   icon: Icons.more_horiz,
-                  label: '',
+                  label: 'Profile',
                   isSelected: _selectedIndex == 3,
                   onTap: () => _onNavItemTapped(3),
                 ),

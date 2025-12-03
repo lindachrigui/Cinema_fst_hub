@@ -85,6 +85,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         context,
         MaterialPageRoute(builder: (context) => const FavouriteMoviesScreen()),
       );
+    } else if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
     } else {
       setState(() {
         _selectedIndex = index;
@@ -97,22 +102,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Déconnexion', style: TextStyle(color: Colors.white)),
+        title: const Text('Logout', style: TextStyle(color: Colors.white)),
         content: const Text(
-          'Voulez-vous vous déconnecter ?',
+          'Do you want to logout?',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Déconnexion',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -163,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const Text(
-                          'Mon Profil',
+                          'My Profile',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -281,7 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Text(
                             _userProfile?.displayName ??
                                 user?.displayName ??
-                                'Utilisateur',
+                                'User',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -339,7 +341,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     const Text(
-                                      'Favoris',
+                                      'Favourites',
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 14,
@@ -370,7 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     const Text(
-                                      'Membre depuis',
+                                      'Member since',
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 14,
@@ -399,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  user?.email ?? 'Non renseigné',
+                                  user?.email ?? 'Not provided',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -436,7 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     Icon(Icons.logout, size: 20),
                                     SizedBox(width: 8),
                                     Text(
-                                      'Déconnexion',
+                                      'Logout',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -495,7 +497,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 _buildNavItem(
                   icon: Icons.more_horiz,
-                  label: '',
+                  label: 'Profile',
                   isSelected: _selectedIndex == 3,
                   onTap: () => _onNavItemTapped(3),
                 ),

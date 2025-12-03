@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/movie_model.dart';
 import '../services/favorite_service.dart';
-import 'favourite_movies_screen.dart';
-import 'home_screen.dart';
-import 'matching_screen.dart';
-import 'profile_screen.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final Movie movie;
@@ -19,7 +15,7 @@ class MovieDetailScreen extends StatefulWidget {
 class _MovieDetailScreenState extends State<MovieDetailScreen> {
   final FavoriteService _favoriteService = FavoriteService();
   bool _isFavorite = false;
-  int _selectedIndex = 0;
+  bool _isLoading = true;
 
   // Helper pour proxy CORS (images Amazon)
   String _getProxiedUrl(String url) {
@@ -41,11 +37,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (mounted) {
         setState(() {
           _isFavorite = isFav;
+          _isLoading = false;
         });
       }
     } catch (e) {
+      print('Erreur vérification favori: $e');
       if (mounted) {
-        setState(() {});
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -56,7 +56,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Vous devez être connecté pour ajouter aux favoris'),
+            content: Text('You must be logged in to add to favourites'),
             backgroundColor: Colors.red,
           ),
         );
@@ -87,7 +87,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              newStatus ? '✅ Ajouté aux favoris' : '❌ Retiré des favoris',
+              newStatus ? ' Added to favourites' : ' Removed from favourites',
             ),
             backgroundColor: newStatus ? Colors.green : Colors.orange,
             duration: const Duration(seconds: 2),
@@ -95,9 +95,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         );
       }
     } catch (e) {
+      print('Erreur toggle favori: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Erreur lors de la modification des favoris'),
+          content: Text('Error modifying favourites'),
           backgroundColor: Colors.red,
         ),
       );
@@ -114,51 +115,90 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             // Movie poster section
             Stack(
               children: [
-                // Movie poster with image
+                // Movie poster
                 Container(
                   height: 400,
                   width: double.infinity,
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
                   child: widget.movie.imageUrl.isNotEmpty
-                      ? Image.network(
-                          _getProxiedUrl(widget.movie.imageUrl),
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              color: const Color(0xFF1E1E1E),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                  color: const Color(0xFF6B46C1),
+                      ? ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(20),
+                            bottomRight: Radius.circular(20),
+                          ),
+                          child: Stack(
+                            children: [
+                              Image.network(
+                                _getProxiedUrl(widget.movie.imageUrl),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        color: const Color(0xFF1E1E1E),
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                            color: const Color(0xFF6B46C1),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFF7B2CBF),
+                                          Color(0xFFE0AAFF),
+                                        ],
+                                      ),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.movie_outlined,
+                                        color: Colors.white,
+                                        size: 80,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              // Gradient overlay
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.only(
+                                    bottomLeft: Radius.circular(20),
+                                    bottomRight: Radius.circular(20),
+                                  ),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.7),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFF7B2CBF),
-                                    Color(0xFFE0AAFF),
-                                  ],
-                                ),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.movie_outlined,
-                                  size: 100,
-                                  color: Colors.white54,
-                                ),
-                              ),
-                            );
-                          },
+                            ],
+                          ),
                         )
                       : Container(
                           decoration: const BoxDecoration(
@@ -167,30 +207,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                               end: Alignment.bottomRight,
                               colors: [Color(0xFF7B2CBF), Color(0xFFE0AAFF)],
                             ),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.movie,
-                              size: 100,
-                              color: Colors.white54,
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(20),
+                              bottomRight: Radius.circular(20),
                             ),
                           ),
                         ),
-                ),
-
-                // Gradient overlay
-                Container(
-                  height: 400,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.7),
-                      ],
-                    ),
-                  ),
                 ),
 
                 // Back button
@@ -218,81 +240,28 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       color: Colors.black.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: IconButton(
-                      icon: Icon(
-                        _isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: _isFavorite ? Colors.red : Colors.white,
-                      ),
-                      onPressed: _toggleFavorite,
-                    ),
-                  ),
-                ),
-
-                // Movie title and info at bottom
-                Positioned(
-                  bottom: 20,
-                  left: 20,
-                  right: 20,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.movie.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF6B46C1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              widget.movie.genre.toUpperCase(),
-                              style: const TextStyle(
+                    child: _isLoading
+                        ? const Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
                                 color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                strokeWidth: 2,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            widget.movie.rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                          )
+                        : IconButton(
+                            icon: Icon(
+                              _isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: _isFavorite ? Colors.red : Colors.white,
+                              size: 28,
                             ),
+                            onPressed: _toggleFavorite,
                           ),
-                          const SizedBox(width: 12),
-                          const Icon(
-                            Icons.access_time,
-                            color: Colors.white70,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            widget.movie.formattedDuration,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
                 ),
               ],
@@ -306,12 +275,69 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Description section
+                      // Movie title
+                      Text(
+                        widget.movie.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Movie info chips
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildInfoChip(
+                            Icons.calendar_today,
+                            widget.movie.releaseYear.toString(),
+                          ),
+                          _buildInfoChip(Icons.category, widget.movie.genre),
+                          _buildInfoChip(
+                            Icons.access_time,
+                            widget.movie.formattedDuration,
+                          ),
+                          _buildInfoChip(Icons.language, widget.movie.language),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Rating
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 24),
+                          const SizedBox(width: 8),
+                          Text(
+                            widget.movie.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Text(
+                            ' / 10',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Description
                       const Text(
-                        'Synopsis',
+                        'Description',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -319,285 +345,67 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       Text(
                         widget.movie.description.isNotEmpty
                             ? widget.movie.description
-                            : 'Aucune description disponible pour ce film.',
+                            : 'No description available for this movie.',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
-                          height: 1.6,
+                          height: 1.5,
                         ),
                       ),
+
                       const SizedBox(height: 24),
 
-                      // Movie Details
-                      const Text(
-                        'Détails',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildDetailRow('Langue', widget.movie.language),
-                      _buildDetailRow(
-                        'Année',
-                        widget.movie.releaseYear.toString(),
-                      ),
-                      _buildDetailRow('Durée', widget.movie.formattedDuration),
-                      _buildDetailRow('Genre', widget.movie.genre),
-                      if (widget.movie.director.isNotEmpty)
-                        _buildDetailRow('Réalisateur', widget.movie.director),
-                      const SizedBox(height: 24),
-
-                      // Cast section
-                      if (widget.movie.cast.isNotEmpty) ...[
+                      // Director
+                      if (widget.movie.director.isNotEmpty) ...[
                         const Text(
-                          'Distribution',
+                          'Director',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 12),
-                        SizedBox(
-                          height: 100,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: widget.movie.cast.length,
-                            itemBuilder: (context, index) {
-                              return Container(
-                                width: 80,
-                                margin: const EdgeInsets.only(right: 12),
-                                child: Column(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 30,
-                                      backgroundColor: const Color(0xFF1E1E1E),
-                                      child: Text(
-                                        widget.movie.cast[index][0]
-                                            .toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Color(0xFF6B46C1),
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      widget.movie.cast[index],
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                      ),
-                                      maxLines: 2,
-                                      textAlign: TextAlign.center,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+                        Text(
+                          widget.movie.director,
+                          style: const TextStyle(
+                            color: Color(0xFF6B46C1),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 24),
                       ],
 
-                      // Stats
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildStatItem(
-                              Icons.visibility,
-                              widget.movie.viewCount.toString(),
-                              'Vues',
-                            ),
-                            _buildStatItem(
-                              Icons.star,
-                              widget.movie.rating.toStringAsFixed(1),
-                              'Note',
-                            ),
-                            _buildStatItem(
-                              Icons.language,
-                              widget.movie.availableLanguages.length.toString(),
-                              'Langues',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 80),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
               ),
             ),
-
-            // Bottom navigation
-            _buildBottomNav(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(IconData icon, String value, String label) {
-    return Column(
-      children: [
-        Icon(icon, color: const Color(0xFF6B46C1), size: 24),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildBottomNav() {
+  Widget _buildInfoChip(IconData icon, String label) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF6B46C1), size: 16),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.movie_outlined,
-                label: 'Movies',
-                isSelected: _selectedIndex == 0,
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HomeScreen()),
-                  );
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.people_outline,
-                label: 'Match',
-                isSelected: _selectedIndex == 1,
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MatchingScreen(),
-                    ),
-                  );
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.favorite_outline,
-                label: 'Favourite',
-                isSelected: _selectedIndex == 2,
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const FavouriteMoviesScreen(),
-                    ),
-                  );
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.person_outline,
-                label: 'Profile',
-                isSelected: _selectedIndex == 3,
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProfileScreen(),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6B46C1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            if (label.isNotEmpty && isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }

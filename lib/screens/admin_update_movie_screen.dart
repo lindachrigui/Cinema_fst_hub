@@ -126,7 +126,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
                     ),
                   ),
                   SizedBox(width: 12),
-                  Text('Compression de l\'image...'),
+                  Text('Compressing image...'),
                 ],
               ),
               backgroundColor: Color(0xFF6B46C1),
@@ -155,7 +155,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
                   const Icon(Icons.check_circle, color: Colors.green),
                   const SizedBox(width: 8),
                   Text(
-                    'Nouvelle image prête (${(compressedBytes.length / 1024).toStringAsFixed(0)} KB)',
+                    'New image ready (${(compressedBytes.length / 1024).toStringAsFixed(0)} KB)',
                   ),
                 ],
               ),
@@ -170,7 +170,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur de sélection d\'image: $e'),
+            content: Text('Image selection error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -208,7 +208,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez entrer un titre'),
+          content: Text('Please enter a title'),
           backgroundColor: Colors.red,
         ),
       );
@@ -257,7 +257,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
         if (uploadedUrl != null) {
           imageUrl = uploadedUrl;
         } else {
-          print('Upload échoué, image non mise à jour');
+          print('Upload failed, image not updated');
         }
       }
 
@@ -290,7 +290,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
               children: [
                 Icon(Icons.check_circle, color: Colors.green),
                 SizedBox(width: 8),
-                Text('Film mis à jour avec succès!'),
+                Text('Movie updated successfully!'),
               ],
             ),
             backgroundColor: Color(0xFF6B46C1),
@@ -527,8 +527,8 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
                       Expanded(
                         child: Text(
                           _imageChanged
-                              ? (_selectedImageName ?? 'Nouvelle image')
-                              : 'Changer l\'image',
+                              ? (_selectedImageName ?? 'New image')
+                              : 'Change image',
                           style: TextStyle(
                             color: _imageChanged
                                 ? const Color(0xFF6B46C1)
@@ -651,7 +651,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
                           ),
                         )
                       : const Text(
-                          'Update Film',
+                          'Update Movie',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -683,7 +683,7 @@ class _AdminUpdateMovieScreenState extends State<AdminUpdateMovieScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem('Dashboard', false),
-                _buildNavItem('Films', true),
+                _buildNavItem('Movies', true),
                 _buildNavItem('Users', false),
               ],
             ),

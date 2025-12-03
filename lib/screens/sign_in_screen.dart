@@ -37,7 +37,7 @@ class _SignInScreenState extends State<SignInScreen> {
   void _handleLogin() async {
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
-      _showErrorDialog('Veuillez remplir tous les champs');
+      _showErrorDialog('Please fill in all fields');
       return;
     }
 
@@ -58,7 +58,7 @@ class _SignInScreenState extends State<SignInScreen> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Connexion réussie!')));
+          ).showSnackBar(const SnackBar(content: Text('Login successful!')));
 
           // Navigation selon le rôle
           if (role == 'admin') {
@@ -78,22 +78,22 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     } on Exception catch (e) {
       if (mounted) {
-        String errorMessage = 'Erreur de connexion';
+        String errorMessage = 'Connection error';
         String exceptionString = e.toString();
 
         if (exceptionString.contains('wrong-password')) {
-          errorMessage = 'Mot de passe incorrect';
+          errorMessage = 'Incorrect password';
         } else if (exceptionString.contains('user-not-found')) {
-          errorMessage = 'Aucun compte trouvé avec cet email';
+          errorMessage = 'No account found with this email';
         } else if (exceptionString.contains('invalid-email')) {
-          errorMessage = 'Email invalide';
+          errorMessage = 'Invalid email';
         } else if (exceptionString.contains('désactivé') ||
             exceptionString.contains('desactivated') ||
             exceptionString.contains('administrateur')) {
           errorMessage =
-              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.';
+              'Your account has been deactivated. Please contact the administrator.';
         } else {
-          // Extraire le message après "Exception: "
+          // Extract message after "Exception: "
           if (exceptionString.contains('Exception: ')) {
             errorMessage = exceptionString.split('Exception: ').last;
           } else {
@@ -104,16 +104,16 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     } catch (e) {
       if (mounted) {
-        String errorMessage = 'Erreur de connexion';
+        String errorMessage = 'Connection error';
         String errorString = e.toString();
 
-        // Extraire le message d'erreur propre
+        // Extract clean error message
         if (errorString.contains('Exception: ')) {
           errorMessage = errorString.split('Exception: ').last;
         } else if (errorString.contains('désactivé') ||
             errorString.contains('administrateur')) {
           errorMessage =
-              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.';
+              'Your account has been deactivated. Please contact the administrator.';
         } else {
           errorMessage = errorString;
         }
@@ -133,7 +133,7 @@ class _SignInScreenState extends State<SignInScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Erreur', style: TextStyle(color: Colors.white)),
+        title: const Text('Error', style: TextStyle(color: Colors.white)),
         content: Text(message, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
@@ -150,7 +150,7 @@ class _SignInScreenState extends State<SignInScreen> {
       await _handleGoogleSignIn();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Connexion avec $provider (Non implémenté)')),
+        SnackBar(content: Text('Login with $provider (Not implemented)')),
       );
     }
   }
@@ -169,7 +169,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Connexion Google réussie!')),
+            const SnackBar(content: Text('Google login successful!')),
           );
 
           // Navigation selon le rôle
@@ -190,12 +190,12 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     } catch (e) {
       if (mounted) {
-        String errorMessage = 'Erreur de connexion';
+        String errorMessage = 'Connection error';
         String errorString = e.toString();
 
         if (errorString.contains('Google Sign-In n\'est pas configuré')) {
           errorMessage =
-              'Google Sign-In n\'est pas encore configuré.\n\nPour l\'activer :\n1. Obtenez un Client ID Google\n2. Remplacez YOUR_GOOGLE_CLIENT_ID dans web/index.html';
+              'Google Sign-In is not yet configured.\n\nTo enable it:\n1. Get a Google Client ID\n2. Replace YOUR_GOOGLE_CLIENT_ID in web/index.html';
         } else if (errorString.contains('Exception: ')) {
           errorMessage = errorString.split('Exception: ').last;
         } else if (errorString.contains('désactivé') ||
@@ -217,9 +217,9 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   void _handleForgotPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Réinitialisation du mot de passe')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Password reset')));
   }
 
   void _handleSignUp() {

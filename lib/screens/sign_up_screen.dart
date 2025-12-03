@@ -113,7 +113,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (_firstNameController.text.trim().isEmpty ||
         _lastNameController.text.trim().isEmpty ||
         _emailController.text.trim().isEmpty) {
-      _showErrorDialog('Veuillez remplir tous les champs obligatoires');
+      _showErrorDialog('Please fill in all required fields');
       return;
     }
 
@@ -145,7 +145,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Compte créé avec succès!')),
+            const SnackBar(content: Text('Account created successfully!')),
           );
 
           // Navigation selon le rôle
@@ -181,7 +181,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Erreur'),
+        title: const Text('Error'),
         content: Text(message),
         actions: [
           TextButton(
@@ -198,7 +198,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       await _handleGoogleSignUp();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign up avec $provider (Non implémenté)')),
+        SnackBar(content: Text('Sign up with $provider (Not implemented)')),
       );
     }
   }
@@ -217,7 +217,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Inscription Google réussie!')),
+            const SnackBar(content: Text('Google sign up successful!')),
           );
 
           // Navigation selon le rôle
@@ -241,7 +241,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         String errorMessage = e.toString();
         if (errorMessage.contains('Google Sign-In n\'est pas configuré')) {
           errorMessage =
-              'Google Sign-In n\'est pas encore configuré.\n\nPour l\'activer :\n1. Obtenez un Client ID Google\n2. Remplacez YOUR_GOOGLE_CLIENT_ID dans web/index.html';
+              'Google Sign-In is not yet configured.\n\nTo enable it:\n1. Get a Google Client ID\n2. Replace YOUR_GOOGLE_CLIENT_ID in web/index.html';
         }
         _showErrorDialog(errorMessage);
       }

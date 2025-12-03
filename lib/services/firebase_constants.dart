@@ -57,13 +57,13 @@ class FirebaseConstants {
   static const String unknownError = 'Une erreur inattendue s\'est produite';
   static const String signInSuccess = 'Connexion réussie!';
   static const String signUpSuccess = 'Compte créé avec succès!';
-  static const String signOutSuccess = 'Déconnexion réussie!';
+  static const String signOutSuccess = 'Logout successful!';
 
-  // Messages de succès
-  static const String movieAddedSuccess = 'Film ajouté avec succès!';
-  static const String movieUpdatedSuccess = 'Film mis à jour avec succès!';
-  static const String movieDeletedSuccess = 'Film supprimé avec succès!';
-  static const String reviewAddedSuccess = 'Critique ajoutée avec succès!';
-  static const String favoriteAddedSuccess = 'Ajouté aux favoris!';
-  static const String favoriteRemovedSuccess = 'Retiré des favoris!';
+  // Success messages
+  static const String movieAddedSuccess = 'Movie added successfully!';
+  static const String movieUpdatedSuccess = 'Movie updated successfully!';
+  static const String movieDeletedSuccess = 'Movie deleted successfully!';
+  static const String reviewAddedSuccess = 'Review added successfully!';
+  static const String favoriteAddedSuccess = 'Added to favourites!';
+  static const String favoriteRemovedSuccess = 'Removed from favourites!';
 }

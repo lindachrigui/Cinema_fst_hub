@@ -7,6 +7,7 @@ import '../services/favorite_service.dart';
 import '../services/moviedb_api_service.dart';
 import '../models/api_movie_model.dart';
 import 'api_movie_detail_screen.dart';
+import 'profile_screen.dart';
 
 class FavouriteMoviesScreen extends StatefulWidget {
   const FavouriteMoviesScreen({super.key});
@@ -38,6 +39,11 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
       setState(() {
         _selectedIndex = index;
       });
+    } else if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
     } else {
       setState(() {
         _selectedIndex = index;
@@ -73,7 +79,7 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
                         ),
                       ),
                       const Text(
-                        'Mes Favoris',
+                        'My Favourites',
                         style: TextStyle(
                           color: Color(0xFF6B46C1),
                           fontSize: 14,
@@ -157,7 +163,7 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Aucun film favori',
+                              'No favourite movies',
                               style: TextStyle(
                                 color: Colors.grey[500],
                                 fontSize: 18,
@@ -166,7 +172,7 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Ajoutez des films à vos favoris\npour les retrouver ici',
+                              'Add movies to your favourites\nto find them here',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.grey[600],
@@ -237,7 +243,7 @@ class _FavouriteMoviesScreenState extends State<FavouriteMoviesScreen> {
                 ),
                 _buildNavItem(
                   icon: Icons.more_horiz,
-                  label: '',
+                  label: 'Profile',
                   isSelected: _selectedIndex == 3,
                   onTap: () => _onNavItemTapped(3),
                 ),

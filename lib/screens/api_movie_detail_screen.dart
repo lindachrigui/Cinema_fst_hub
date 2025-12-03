@@ -56,7 +56,7 @@ class _ApiMovieDetailScreenState extends State<ApiMovieDetailScreen> {
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Vous devez être connecté pour ajouter aux favoris'),
+            content: Text('You must be logged in to add to favourites'),
             backgroundColor: Colors.red,
           ),
         );
@@ -87,7 +87,7 @@ class _ApiMovieDetailScreenState extends State<ApiMovieDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              newStatus ? '✅ Ajouté aux favoris' : '❌ Retiré des favoris',
+              newStatus ? ' Added to favourites' : ' Removed from favourites',
             ),
             backgroundColor: newStatus ? Colors.green : Colors.orange,
             duration: const Duration(seconds: 2),
@@ -98,7 +98,7 @@ class _ApiMovieDetailScreenState extends State<ApiMovieDetailScreen> {
       print('Erreur toggle favori: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Erreur lors de la modification des favoris'),
+          content: Text('Error modifying favourites'),
           backgroundColor: Colors.red,
         ),
       );
@@ -337,7 +337,7 @@ class _ApiMovieDetailScreenState extends State<ApiMovieDetailScreen> {
 
                       // Description
                       const Text(
-                        'Synopsis',
+                        'Description',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -359,7 +359,7 @@ class _ApiMovieDetailScreenState extends State<ApiMovieDetailScreen> {
                       // Director
                       if (widget.movie.director.isNotEmpty) ...[
                         const Text(
-                          'Réalisateur',
+                          'Director',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -414,48 +414,6 @@ class _ApiMovieDetailScreenState extends State<ApiMovieDetailScreen> {
                         ),
                         const SizedBox(height: 24),
                       ],
-
-                      // Available Languages
-                      if (widget.movie.availableLanguages.isNotEmpty) ...[
-                        const Text(
-                          'Langues disponibles',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: widget.movie.availableLanguages.map((lang) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF6B46C1).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: const Color(0xFF6B46C1),
-                                ),
-                              ),
-                              child: Text(
-                                lang,
-                                style: const TextStyle(
-                                  color: Color(0xFF6B46C1),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-
-                      const SizedBox(height: 40),
                     ],
                   ),
                 ),

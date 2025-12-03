@@ -6,11 +6,9 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // Configuration pour le web - nécessite un Client ID valide
-    clientId: const String.fromEnvironment(
-      'GOOGLE_CLIENT_ID',
-      defaultValue: '',
-    ),
+    // Configuration pour le web - Client ID configuré
+    clientId:
+        '211369555556-dmsijqdv80q37p99hrlavmtcm8go51hb.apps.googleusercontent.com',
   );
 
   // Get current user
@@ -45,7 +43,7 @@ class AuthService {
 
       return result;
     } catch (e) {
-      print('Erreur d\'inscription: $e');
+      print('Registration error: $e');
       rethrow;
     }
   }
@@ -64,7 +62,7 @@ class AuthService {
           .get();
 
       if (userQuery.docs.isEmpty) {
-        throw Exception('Aucun utilisateur trouvé avec ce prénom');
+        throw Exception('No user found with this first name');
       }
 
       // Vérifier si le compte est actif (sauf pour les admins)
@@ -75,7 +73,7 @@ class AuthService {
         final isActive = userData['isActive'] ?? true;
         if (!isActive) {
           throw Exception(
-            'Votre compte a été désactivé. Veuillez contacter l\'administrateur.',
+            'Your account has been deactivated. Please contact the administrator.',
           );
         }
       }
@@ -140,7 +138,7 @@ class AuthService {
 
       return result;
     } catch (e) {
-      print('Erreur de connexion: $e');
+      print('Sign-in error: $e');
       rethrow;
     }
   }
@@ -162,18 +160,15 @@ class AuthService {
         print('Google sign out skipped: $e');
       }
     } catch (e) {
-      print('Erreur de déconnexion: $e');
+      print('Sign-out error: $e');
       rethrow;
     }
   }
 
   // Vérifier si Google Sign-In est disponible
   bool get isGoogleSignInAvailable {
-    const clientId = String.fromEnvironment(
-      'GOOGLE_CLIENT_ID',
-      defaultValue: '',
-    );
-    return clientId.isNotEmpty;
+    // Client ID configuré directement
+    return true;
   }
 
   // Connexion avec Google
@@ -181,7 +176,7 @@ class AuthService {
     try {
       if (!isGoogleSignInAvailable) {
         throw Exception(
-          'Google Sign-In n\'est pas configuré. Veuillez configurer GOOGLE_CLIENT_ID.',
+          'Google Sign-In is not configured. Please configure GOOGLE_CLIENT_ID.',
         );
       }
 

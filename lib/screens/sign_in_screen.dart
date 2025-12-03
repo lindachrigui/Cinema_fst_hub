@@ -201,7 +201,7 @@ class _SignInScreenState extends State<SignInScreen> {
         } else if (errorString.contains('désactivé') ||
             errorString.contains('administrateur')) {
           errorMessage =
-              'Votre compte a été désactivé. Veuillez contacter l\'administrateur.';
+              'Your account has been deactivated. Please contact the administrator.';
         } else {
           errorMessage = errorString;
         }
